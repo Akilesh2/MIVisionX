@@ -38,6 +38,9 @@ struct ColorTwistbatchPDLocalData
     vx_float32 *beta;
     vx_float32 *hue;
     vx_float32 *sat;
+    RpptDescPtr srcDescPtr, dstDescPtr;
+    RpptROIPtr roiTensorPtrSrc;
+    RpptRoiType roiType;
 #if ENABLE_OPENCL
     cl_mem cl_pSrc;
     cl_mem cl_pDst;
@@ -55,15 +58,14 @@ static vx_status VX_CALLBACK refreshColorTwistbatchPD(vx_node node, const vx_ref
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[5], 0, data->nbatchSize, sizeof(vx_float32), data->beta, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[6], 0, data->nbatchSize, sizeof(vx_float32), data->hue, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[7], 0, data->nbatchSize, sizeof(vx_float32), data->sat, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    STATUS_ERROR_CHECK(vxQueryImage((vx_image)parameters[0], VX_IMAGE_HEIGHT, &data->maxSrcDimensions.height, sizeof(data->maxSrcDimensions.height)));
-    STATUS_ERROR_CHECK(vxQueryImage((vx_image)parameters[0], VX_IMAGE_WIDTH, &data->maxSrcDimensions.width, sizeof(data->maxSrcDimensions.width)));
-    data->maxSrcDimensions.height = data->maxSrcDimensions.height / data->nbatchSize;
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[1], 0, data->nbatchSize, sizeof(Rpp32u), data->srcBatch_width, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[2], 0, data->nbatchSize, sizeof(Rpp32u), data->srcBatch_height, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     for (int i = 0; i < data->nbatchSize; i++)
     {
-        data->srcDimensions[i].width = data->srcBatch_width[i];
-        data->srcDimensions[i].height = data->srcBatch_height[i];
+        data->srcDimensions[i].width = data->roiTensorPtrSrc[i].xywhROI.roiWidth = data->srcBatch_width[i];
+        data->srcDimensions[i].height = data->roiTensorPtrSrc[i].xywhROI.roiHeight = data->srcBatch_height[i];
+        data->roiTensorPtrSrc[i].xywhROI.xy.x = 0;
+        data->roiTensorPtrSrc[i].xywhROI.xy.y = 0;
     }
     if (data->device_type == AGO_TARGET_AFFINITY_GPU)
     {
@@ -174,6 +176,9 @@ static vx_status VX_CALLBACK initializeColorTwistbatchPD(vx_node node, const vx_
 #endif
     STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[9], &data->device_type, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     STATUS_ERROR_CHECK(vxReadScalarValue((vx_scalar)parameters[8], &data->nbatchSize));
+    STATUS_ERROR_CHECK(vxQueryImage((vx_image)parameters[0], VX_IMAGE_HEIGHT, &data->maxSrcDimensions.height, sizeof(data->maxSrcDimensions.height)));
+    STATUS_ERROR_CHECK(vxQueryImage((vx_image)parameters[0], VX_IMAGE_WIDTH, &data->maxSrcDimensions.width, sizeof(data->maxSrcDimensions.width)));
+    data->maxSrcDimensions.height = data->maxSrcDimensions.height / data->nbatchSize;
     data->alpha = (vx_float32 *)malloc(sizeof(vx_float32) * data->nbatchSize);
     data->beta = (vx_float32 *)malloc(sizeof(vx_float32) * data->nbatchSize);
     data->hue = (vx_float32 *)malloc(sizeof(vx_float32) * data->nbatchSize);
@@ -181,6 +186,56 @@ static vx_status VX_CALLBACK initializeColorTwistbatchPD(vx_node node, const vx_
     data->srcDimensions = (RppiSize *)malloc(sizeof(RppiSize) * data->nbatchSize);
     data->srcBatch_width = (Rpp32u *)malloc(sizeof(Rpp32u) * data->nbatchSize);
     data->srcBatch_height = (Rpp32u *)malloc(sizeof(Rpp32u) * data->nbatchSize);
+
+
+    // Initializing tensor config parameters.
+
+    uint ip_channel = 3; // Color Twist supports only RGB
+    data->srcDescPtr->layout = RpptLayout::NHWC;
+    data->dstDescPtr->layout = RpptLayout::NHWC;
+
+    data->srcDescPtr->dataType = RpptDataType::U8;
+    data->dstDescPtr->dataType = RpptDataType::U8;
+
+    // Set numDims, offset, n/c/h/w values for src/dst
+    data->srcDescPtr->numDims = 4;
+    data->dstDescPtr->numDims = 4;
+
+    data->srcDescPtr->offsetInBytes = 0;
+    data->dstDescPtr->offsetInBytes = 0;
+
+    data->srcDescPtr->n = data->nbatchSize;
+    data->srcDescPtr->h = data->maxSrcDimensions.height;
+    data->srcDescPtr->w = data->maxSrcDimensions.width;
+    data->srcDescPtr->c = ip_channel;
+
+    data->dstDescPtr->n = data->nbatchSize;
+    data->dstDescPtr->h = data->maxSrcDimensions.height;
+    data->dstDescPtr->w = data->maxSrcDimensions.width;
+    data->dstDescPtr->c = ip_channel;
+
+    // Optionally set w stride as a multiple of 8 for src/dst
+
+   data->srcDescPtr->w = ((data->srcDescPtr->w / 8) * 8) + 8;
+    data->dstDescPtr->w = ((data->dstDescPtr->w / 8) * 8) + 8;
+
+    // Set n/c/h/w strides for src/dst
+
+    data->srcDescPtr->strides.nStride = ip_channel * data->srcDescPtr->w * data->srcDescPtr->h;
+    data->srcDescPtr->strides.hStride = ip_channel * data->srcDescPtr->w;
+    data->srcDescPtr->strides.wStride = ip_channel;
+    data->srcDescPtr->strides.cStride = 1;
+
+    data->dstDescPtr->strides.nStride = ip_channel * data->dstDescPtr->w * data->dstDescPtr->h;
+    data->dstDescPtr->strides.hStride = ip_channel * data->dstDescPtr->w;
+    data->dstDescPtr->strides.wStride = ip_channel;
+    data->dstDescPtr->strides.cStride = 1;
+
+    // Initialize ROI tensors for src/dst
+    data->roiTensorPtrSrc  = (RpptROI *) calloc(data->nbatchSize, sizeof(RpptROI));
+
+    // Set ROI tensors types for src/dst
+    data->roiType = RpptRoiType::XYWH;
 
     refreshColorTwistbatchPD(node, parameters, num, data);
 #if ENABLE_OPENCL
@@ -214,6 +269,7 @@ static vx_status VX_CALLBACK uninitializeColorTwistbatchPD(vx_node node, const v
     free(data->srcDimensions);
     free(data->srcBatch_width);
     free(data->srcBatch_height);
+    free(data->roiTensorPtrSrc);
     delete (data);
     return VX_SUCCESS;
 }
