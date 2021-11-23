@@ -41,6 +41,7 @@ struct ColorTwistbatchPDLocalData
     RpptDescPtr srcDescPtr, dstDescPtr;
     RpptROIPtr roiTensorPtrSrc;
     RpptRoiType roiType;
+    RpptDesc srcDesc, dstDesc;
 #if ENABLE_OPENCL
     cl_mem cl_pSrc;
     cl_mem cl_pDst;
@@ -158,7 +159,8 @@ static vx_status VX_CALLBACK processColorTwistbatchPD(vx_node node, const vx_ref
         refreshColorTwistbatchPD(node, parameters, num, data);
         if (df_image == VX_DF_IMAGE_RGB)
         {
-            rpp_status = rppi_color_twist_u8_pkd3_batchPD_host(data->pSrc, data->srcDimensions, data->maxSrcDimensions, data->pDst, data->alpha, data->beta, data->hue, data->sat, output_format_toggle, data->nbatchSize, data->rppHandle);
+            // rpp_status = rppi_color_twist_u8_pkd3_batchPD_host(data->pSrc, data->srcDimensions, data->maxSrcDimensions, data->pDst, data->alpha, data->beta, data->hue, data->sat, output_format_toggle, data->nbatchSize, data->rppHandle);
+            rpp_status = rppt_color_twist_host(data->pSrc, data->srcDescPtr, data->pDst, data->dstDescPtr, data->alpha, data->beta, data->hue, data->sat, data->roiTensorPtrSrc, data->roiType, data->rppHandle);
         }
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
     }
@@ -188,9 +190,11 @@ static vx_status VX_CALLBACK initializeColorTwistbatchPD(vx_node node, const vx_
     data->srcBatch_height = (Rpp32u *)malloc(sizeof(Rpp32u) * data->nbatchSize);
 
 
-    // Initializing tensor config parameters.
+     // Initializing tensor config parameters.
 
     uint ip_channel = 3; // Color Twist supports only RGB
+    data->srcDescPtr = &data->srcDesc;
+    data->dstDescPtr = &data->dstDesc;
     data->srcDescPtr->layout = RpptLayout::NHWC;
     data->dstDescPtr->layout = RpptLayout::NHWC;
 
@@ -213,11 +217,6 @@ static vx_status VX_CALLBACK initializeColorTwistbatchPD(vx_node node, const vx_
     data->dstDescPtr->h = data->maxSrcDimensions.height;
     data->dstDescPtr->w = data->maxSrcDimensions.width;
     data->dstDescPtr->c = ip_channel;
-
-    // Optionally set w stride as a multiple of 8 for src/dst
-
-   data->srcDescPtr->w = ((data->srcDescPtr->w / 8) * 8) + 8;
-    data->dstDescPtr->w = ((data->dstDescPtr->w / 8) * 8) + 8;
 
     // Set n/c/h/w strides for src/dst
 
