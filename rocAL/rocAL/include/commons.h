@@ -41,7 +41,8 @@ enum class RaliTensorFormat
 enum class RaliTensorDataType
 {
     FP32 = 0,
-    FP16
+    FP16 = 1,
+    UINT8 = 2
 };
 enum class RaliAffinity
 {
@@ -52,7 +53,7 @@ enum class RaliAffinity
 /*! \brief Color formats currently supported by Rali SDK as input/output
  *
  */
-enum class RaliColorFormat 
+enum class RaliColorFormat
 {
     RGB24 = 0,
     BGR24,
@@ -61,10 +62,10 @@ enum class RaliColorFormat
 };
 
 /*! \brief Memory type, host or device
- * 
+ *
  *  Currently supports HOST and OCL, will support HIP in future
  */
-enum class RaliMemType 
+enum class RaliMemType
 {
     HOST = 0,
     OCL,
@@ -72,7 +73,7 @@ enum class RaliMemType
 };
 
 /*! \brief Decoder mode for Video decoding
- * 
+ *
  *  Currently supports Software decoding, will support Hardware decoding in future
  */
 enum class DecodeMode

@@ -40,6 +40,7 @@ typedef void * RaliFloatParam;
 typedef void * RaliIntParam;
 typedef void * RaliContext;
 typedef void * RaliImage;
+typedef void * RaliTensor;
 typedef void * RaliMetaData;
 
 struct TimingInfo
@@ -103,7 +104,8 @@ enum RaliTensorLayout
 enum RaliTensorOutputType
 {
     RALI_FP32 = 0,
-    RALI_FP16 = 1
+    RALI_FP16 = 1,
+    RALI_UINT8 = 2
 };
 
 enum RaliDecoderType
