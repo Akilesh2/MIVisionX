@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2017 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -48,7 +48,11 @@ THE SOFTWARE.
 #if __APPLE__
 #include <opencl.h>
 #else
+#if ENABLE_OPENCL
 #include <CL/cl.h>
+#elif ENABLE_HIP
+#include "../nn_hip/nn_hip_host_decls.h"
+#endif
 #endif
 #if _WIN32
 #include <windows.h>
@@ -117,6 +121,7 @@ enum user_kernel_e
     VX_KERNEL_TOPK_LAYER_AMD                 = VX_KERNEL_BASE(VX_ID_AMD, NN_EXTENSION_LIBRARY) + 0x017,
     VX_KERNEL_REDUCE_MIN_LAYER_AMD           = VX_KERNEL_BASE(VX_ID_AMD, NN_EXTENSION_LIBRARY) + 0x018,
     VX_KERNEL_TILE_LAYER_AMD                 = VX_KERNEL_BASE(VX_ID_AMD, NN_EXTENSION_LIBRARY) + 0x019,
+    VX_KERNEL_TENSOR_COMPARE_AMD            = VX_KERNEL_BASE(VX_ID_AMD, NN_EXTENSION_LIBRARY) + 0x01a,
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -124,7 +129,11 @@ enum user_kernel_e
 struct NeuralNetworkCommonHandle {
     int count;
     miopenHandle_t  miopen_handle;
+#if ENABLE_OPENCL
     cl_command_queue cmdq;
+#elif ENABLE_HIP
+    hipStream_t cmdq;
+#endif
     bool exhaustiveSearch;
 };
 
@@ -177,6 +186,7 @@ vx_status publishGatherLayer(vx_context context);
 vx_status publishTopKLayer(vx_context context);
 vx_status publishReduceMinLayer(vx_context context);
 vx_status publishTileLayer(vx_context context);
+vx_status publishTensorCompare(vx_context context);
 
 //////////////////////////////////////////////////////////////////////
 //! \brief The module entry point for publishing/unpublishing kernels

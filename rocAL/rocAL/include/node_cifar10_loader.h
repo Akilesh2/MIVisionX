@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,11 @@ public:
     /// \param device_resources shard count from user
 
     /// internal_shard_count number of loader/decoders are created and each shard is loaded and decoded using separate and independent resources increasing the parallelism and performance.
+#if ENABLE_HIP
+    Cifar10LoaderNode(Image *output, DeviceResourcesHip device_resources);
+#else
     Cifar10LoaderNode(Image *output, DeviceResources device_resources);
+#endif
     ~Cifar10LoaderNode() override;
     Cifar10LoaderNode() = delete;
     ///

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -50,7 +50,7 @@ TFRecordReader::TFRecordReader():
     _file_count_all_shards = 0;
 }
 
-unsigned TFRecordReader::count()
+unsigned TFRecordReader::count_items()
 {
     if (_loop)
         return _file_names.size();
@@ -109,7 +109,7 @@ size_t TFRecordReader::open()
     return _current_file_size;
 }
 
-size_t TFRecordReader::read(unsigned char *buf, size_t read_size)
+size_t TFRecordReader::read_data(unsigned char *buf, size_t read_size)
 {
     auto ret = read_image(buf, _file_names[_curr_file_idx], _file_size[_file_names[_curr_file_idx]]);
     if(ret != Reader::Status::OK )

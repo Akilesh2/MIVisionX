@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,11 @@ THE SOFTWARE.
 #define STR(X) std::string(X)
 
 #include <iostream>
-#define INFO(X) std::clog << "[INF] "  << " {" << __func__ <<"} " << " " << X << std::endl;
+#if DBGINFO
+#define INFO(X) std::clog << "[INF] " << " {" << __func__ <<"} " << " " << X << std::endl;
+#else
+#define INFO(X) ;
+#endif
 #if DBGLOG
 #define LOG(X) std::clog << "[LOG] "  << " {" << __func__ <<"} " << " " << X << std::endl;
 #else

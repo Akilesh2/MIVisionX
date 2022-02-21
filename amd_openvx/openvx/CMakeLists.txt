@@ -1,4 +1,4 @@
-# Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -63,32 +63,33 @@ list(APPEND SOURCES
     api/vx_nodes.cpp
 )
 
-
 # Backend Specific Settings
 if (GPU_SUPPORT AND "${BACKEND}" STREQUAL "OPENCL")
     find_package(OpenCL QUIET)
     if(OpenCL_FOUND)
         add_library(openvx SHARED ${SOURCES})
         add_library(vxu SHARED api/vxu.cpp)
-        target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=1)
-        target_compile_definitions(openvx PUBLIC ENABLE_HIP=0)
-        target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=1)
-        target_compile_definitions(vxu PUBLIC ENABLE_HIP=0)
+        set(ENABLE_OPENCL 1)
+        set(ENABLE_HIP 0)
+        target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+        target_compile_definitions(openvx PUBLIC ENABLE_HIP=${ENABLE_HIP})
+        target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+        target_compile_definitions(vxu PUBLIC ENABLE_HIP=${ENABLE_HIP})
         include_directories(${OpenCL_INCLUDE_DIRS} ${OpenCL_INCLUDE_DIRS}/Headers)
         target_link_libraries(openvx ${OpenCL_LIBRARIES})
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -std=c++14")
         message("-- ${Green}AMD OpenVX -- OpenVX built with OpenCL Support${ColourReset}")
         message("-- ${Blue}Using OpenCL Library -- ${OpenCL_LIBRARIES}${ColourReset}")
     else()
         set(GPU_SUPPORT OFF)
         add_library(openvx SHARED ${SOURCES})
         add_library(vxu SHARED api/vxu.cpp)
-        target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=0)
-        target_compile_definitions(openvx PUBLIC ENABLE_HIP=0)
-        target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=0)
-        target_compile_definitions(vxu PUBLIC ENABLE_HIP=0)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -std=c++14")
-        message("-- ${Yellow}WARNING:OpenCL Not Found -- OpenVX built for CPU only${ColourReset}")
+        set(ENABLE_OPENCL 0)
+        set(ENABLE_HIP 0)
+        target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+        target_compile_definitions(openvx PUBLIC ENABLE_HIP=${ENABLE_HIP})
+        target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+        target_compile_definitions(vxu PUBLIC ENABLE_HIP=${ENABLE_HIP})
+        message("-- ${Red}WARNING: OpenCL Not Found -- OpenVX built for CPU only${ColourReset}")
     endif()
 elseif (GPU_SUPPORT AND "${BACKEND}" STREQUAL "HIP")
     SET(OpenCL_FOUND FALSE)
@@ -102,20 +103,21 @@ elseif (GPU_SUPPORT AND "${BACKEND}" STREQUAL "HIP")
     if(HIP_FOUND)
         message(STATUS "Found HIP: " ${HIP_PATH} " version: " ${HIP_VERSION})
         if(HIP_COMPILER STREQUAL clang)
-            set(hip_library_name amdhip64)
             add_subdirectory(hipvx)
             add_library(vxu SHARED api/vxu.cpp)
-            target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=0)
-            target_compile_definitions(vxu PUBLIC ENABLE_HIP=1)
-            add_library(openvx SHARED ${SOURCES})
+            set(ENABLE_OPENCL 0)
+            set(ENABLE_HIP 1)
+            target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+            target_compile_definitions(vxu PUBLIC ENABLE_HIP=${ENABLE_HIP})
+            add_library(openvx SHARED ${SOURCES} $<TARGET_OBJECTS:openvx_hip>)
             set_target_properties(openvx PROPERTIES LINKER_LANGUAGE CXX)
             set_target_properties(openvx PROPERTIES POSITION_INDEPENDENT_CODE ON)
             include_directories(${HIP_PATH}/include ${HSA_PATH}/include)
             include_directories(hipvx)
-            target_compile_definitions(openvx PUBLIC ENABLE_HIP=1 )
-            target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=0)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -std=c++14")
-            link_directories(${ROCM_PATH}/mivisionx/lib ${HIP_PATH}/lib)
+            target_compile_definitions(openvx PUBLIC ENABLE_HIP=${ENABLE_HIP})
+            target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+            link_directories(${HIP_PATH}/lib)
+            target_link_libraries(openvx ${HIP_PATH}/lib/libamdhip64.so)
             message("-- ${Green}AMD OpenVX -- OpenVX built with HIP Support${ColourReset}")
         else()
             message(FATAL_ERROR "unsupported hip compiler")
@@ -124,23 +126,28 @@ elseif (GPU_SUPPORT AND "${BACKEND}" STREQUAL "HIP")
         set(GPU_SUPPORT OFF)
         add_library(openvx SHARED ${SOURCES})
         add_library(vxu SHARED api/vxu.cpp)
-        target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=0)
-        target_compile_definitions(openvx PUBLIC ENABLE_HIP=0)
-        target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=0)
-        target_compile_definitions(vxu PUBLIC ENABLE_HIP=0)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -std=c++14")
-        message("-- ${Yellow}WARNING:HIP Not Found -- OpenVX built for CPU only${ColourReset}")
+        set(ENABLE_OPENCL 0)
+        set(ENABLE_HIP 0)
+        target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+        target_compile_definitions(openvx PUBLIC ENABLE_HIP=${ENABLE_HIP})
+        target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+        target_compile_definitions(vxu PUBLIC ENABLE_HIP=${ENABLE_HIP})
+        message("-- ${Red}WARNING: HIP Not Found -- OpenVX built for CPU only${ColourReset}")
     endif()
 else()
     add_library(openvx SHARED ${SOURCES})
     add_library(vxu SHARED api/vxu.cpp)
-    target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=0)
-    target_compile_definitions(openvx PUBLIC ENABLE_HIP=0)
-    target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=0)
-    target_compile_definitions(vxu PUBLIC ENABLE_HIP=0)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -std=c++14")
-    message("-- ${Yellow}WARNING:OpenCL/HIP Not Found -- OpenVX built for CPU only${ColourReset}")
+    set(ENABLE_OPENCL 0)
+    set(ENABLE_HIP 0)
+    target_compile_definitions(openvx PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+    target_compile_definitions(openvx PUBLIC ENABLE_HIP=${ENABLE_HIP})
+    target_compile_definitions(vxu PUBLIC ENABLE_OPENCL=${ENABLE_OPENCL})
+    target_compile_definitions(vxu PUBLIC ENABLE_HIP=${ENABLE_HIP})
+    message("-- ${Red}WARNING: OpenCL/HIP Not Found or GPU Support Turned OFF -- OpenVX built for CPU only${ColourReset}")
 endif()
+
+configure_file("${PROJECT_SOURCE_DIR}/include/openvx_backend.h.in" "${PROJECT_BINARY_DIR}/include/openvx_backend.h")
+install(FILES ${PROJECT_BINARY_DIR}/include/openvx_backend.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 
 install(TARGETS openvx DESTINATION lib)
 install(TARGETS vxu DESTINATION lib)
@@ -151,10 +158,16 @@ install (FILES
             include/VX/vx_compatibility.h
             include/VX/vx_import.h
             include/VX/vx_kernels.h
+            include/VX/vx_khr_buffer_aliasing.h
+            include/VX/vx_khr_class.h
             include/VX/vx_khr_icd.h
+            include/VX/vx_khr_import_kernel.h
             include/VX/vx_khr_ix.h
             include/VX/vx_khr_nn.h
+            include/VX/vx_khr_opencl_interop.h
+            include/VX/vx_khr_pipelining.h
             include/VX/vx_khr_tiling.h
+            include/VX/vx_khr_user_data_object.h
             include/VX/vx_khr_xml.h
             include/VX/vx_nodes.h
             include/VX/vx_types.h
@@ -166,6 +179,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD /DVX_API_ENTRY=__declspec(dllexport)")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd /DVX_API_ENTRY=__declspec(dllexport)")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -std=gnu++14")
     target_link_libraries(openvx dl m)
+    target_link_libraries(vxu openvx)
 endif()

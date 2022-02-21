@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -66,6 +66,7 @@ private:
     DecoderConfig _decoder_cfg_cv;
     std::shared_ptr<Decoder> _decoder;
     std::shared_ptr<Reader> _reader;
+    std::shared_ptr<MetaDataReader> _meta_data_reader;
     std::vector<unsigned char> _header_buff;
     static const size_t COMPRESSED_SIZE = 1024 * 1024; // 1 MB
 };

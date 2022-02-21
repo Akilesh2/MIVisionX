@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +49,8 @@ public:
     void create(ReaderConfig reader_config, DecoderConfig decoder_config, int batch_size);
     void set_bbox_vector(std::vector<std::vector <float>> bbox_coords) { _bbox_coords = bbox_coords;};
     void set_random_bbox_data_reader(std::shared_ptr<RandomBBoxCrop_MetaDataReader> randombboxcrop_meta_data_reader);
+    std::vector<std::vector <float>> get_batch_random_bbox_crop_coords();
+    void set_batch_random_bbox_crop_coords(std::vector<std::vector <float>> batch_crop_coords);
 
     //! Loads a decompressed batch of images into the buffer indicated by buff
     /// \param buff User's buffer provided to be filled with decoded image samples
@@ -91,7 +93,7 @@ private:
     size_t _batch_size;
     DecoderConfig _decoder_config, _decoder_config_cv;
     bool decoder_keep_original;
-    std::vector<std::vector <float>> _bbox_coords;
+    std::vector<std::vector <float>> _bbox_coords, _crop_coords_batch;
     std::shared_ptr<RandomBBoxCrop_MetaDataReader> _randombboxcrop_meta_data_reader = nullptr;
     pCropCord _CropCord;
 };

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -71,6 +71,7 @@ class RandomBBoxCropReader: public RandomBBoxCrop_MetaDataReader
 public:
     void init(const RandomBBoxCrop_MetaDataConfig& cfg) override;
     void lookup(const std::vector<std::string>& image_names) override;
+    std::vector<std::vector <float>>  get_batch_crop_coords(const std::vector<std::string>& image_names) override ;
     void read_all() override;
     void release() override;
     void print_map_contents();
@@ -96,10 +97,12 @@ private:
     int _user_batch_size;
     int64_t _seed;
     void add(std::string image_name, BoundingBoxCord bbox);
+    std::vector<std::vector <float>> _crop_coords;
     bool exists(const std::string &image_name);
     std::map<std::string, std::shared_ptr<CropCord>> _map_content;
     std::map<std::string, std::shared_ptr<CropCord>>::iterator _itr;
     std::shared_ptr<Graph> _graph = nullptr;
     CropCordBatch* _output;
     SeededRNG<std::mt19937, 4> _rngs;     // setting the state_size to 4 for 4 random parameters.
+    size_t _sample_cnt;
 };

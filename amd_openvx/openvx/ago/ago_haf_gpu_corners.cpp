@@ -1,5 +1,5 @@
 /* 
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -55,13 +55,13 @@ int HafGpu_FastCorners_XY_U8(AgoNode * node)
 	node->opencl_param_atomic_mask = (1 << 0);
 	node->opencl_local_buffer_usage_mask = 0;
 	node->opencl_local_buffer_size_in_bytes = 0;
-	node->opencl_scalar_array_output_sync.enable = false;
+	node->gpu_scalar_array_output_sync.enable = false;
 	if (numCorners) {
 		// discard the scalar argument and inform the framework that it needs to be synched with array output numitems
 		node->opencl_param_discard_mask = (1 << 1);
-		node->opencl_scalar_array_output_sync.enable = true;
-		node->opencl_scalar_array_output_sync.paramIndexArray = 0;
-		node->opencl_scalar_array_output_sync.paramIndexScalar = 1;
+		node->gpu_scalar_array_output_sync.enable = true;
+		node->gpu_scalar_array_output_sync.paramIndexArray = 0;
+		node->gpu_scalar_array_output_sync.paramIndexScalar = 1;
 	}
 
 	if (useNonMax)

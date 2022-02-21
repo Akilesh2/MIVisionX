@@ -1,8 +1,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
-#include <iostream>	
-#include <pybind11/embed.h>	
+#include <iostream>
+#include <pybind11/embed.h>
 #include <pybind11/eval.h>
 #include "rali_api_types.h"
 #include "rali_api.h"
@@ -13,14 +13,14 @@
 #include "rali_api_info.h"
 namespace py = pybind11;
 
-using float16 = half_float::half;	
-static_assert(sizeof(float16) == 2, "Bad size");	
+using float16 = half_float::half;
+static_assert(sizeof(float16) == 2, "Bad size");
 namespace pybind11
 {
     namespace detail
-    {	
+    {
         constexpr int NPY_FLOAT16 = 23;
-        // Kinda following: https://github.com/pybind/pybind11/blob/9bb3313162c0b856125e481ceece9d8faa567716/include/pybind11/numpy.h#L1000	
+        // Kinda following: https://github.com/pybind/pybind11/blob/9bb3313162c0b856125e481ceece9d8faa567716/include/pybind11/numpy.h#L1000
         template <> struct npy_format_descriptor<float16>
         {
             static constexpr auto name = _("float16");
@@ -50,7 +50,7 @@ namespace rali{
         int* ptr = (int*) buf.ptr;
         // call pure C++ function
         int length =raliGetImageNameLen(context,ptr);
-        
+
         return py::cast(length);
     }
 
@@ -62,7 +62,7 @@ namespace rali{
         ptr = (char *)malloc(array_len * sizeof(char));
         // call pure C++ function
         raliGetImageName(context,ptr);
-        std::string s(ptr); 
+        std::string s(ptr);
         free(ptr);
         return py::bytes(s);
     }
@@ -108,14 +108,22 @@ namespace rali{
         return py::cast<py::none>(Py_None);
     }
 
+    py::object wrapper_image_id(RaliContext context, py::array_t<int> array)
+    {
+        auto buf = array.request();
+        int* ptr = (int*) buf.ptr;
+        // call pure C++ function
+        raliGetImageId(context,ptr);
+        return py::cast<py::none>(Py_None);
+    }
     py::object wrapper_labels_BB_count_copy(RaliContext context, py::array_t<int> array)
-    
+
     {
         auto buf = array.request();
         int* ptr = (int*) buf.ptr;
         // call pure C++ function
         int count =raliGetBoundingBoxCount(context,ptr);
-        
+
         return py::cast(count);
     }
 
@@ -126,6 +134,17 @@ namespace rali{
         int* ptr = (int*) buf.ptr;
         // call pure C++ function
         raliGetBoundingBoxLabel(context,ptr);
+        return py::cast<py::none>(Py_None);
+    }
+
+    py::object wrapper_encoded_bbox_label(RaliContext context, py::array_t<float>bboxes_array, py::array_t<int>labels_array)
+    {
+        auto bboxes_buf = bboxes_array.request();
+        float* bboxes_ptr = (float*) bboxes_buf.ptr;
+        auto labels_buf = labels_array.request();
+        int* labels_ptr = (int*) labels_buf.ptr;
+        // call pure C++ function
+        raliCopyEncodedBoxesAndLables(context, bboxes_ptr , labels_ptr);
         return py::cast<py::none>(Py_None);
     }
 
@@ -173,8 +192,10 @@ namespace rali{
                 py::return_value_policy::reference,
                 py::arg("batch_size"),
                 py::arg("affinity"),
-                py::arg("gpu_id") = 0, 
-                py::arg("cpu_thread_count") = 1);
+                py::arg("gpu_id") = 0,
+                py::arg("cpu_thread_count") = 1,
+                py::arg("prefetch_queue_depth") = 3,
+                py::arg("output_data_type") = 0);
         m.def("raliVerify",&raliVerify);
         m.def("raliRun",&raliRun);
         m.def("raliRelease",&raliRelease);
@@ -228,6 +249,7 @@ namespace rali{
         m.def("getImageHeight",&raliGetImageHeight);
         m.def("getImagePlanes",&raliGetImagePlanes);
         m.def("getImageName",&wrapper_image_name);
+        m.def("getImageId", &wrapper_image_id);
         m.def("getImageNameLen",&wrapper_image_name_length);
         m.def("getStatus",&raliGetStatus);
         m.def("labelReader",&raliCreateLabelReader);
@@ -243,10 +265,12 @@ namespace rali{
         m.def("getImageLabels",&wrapper_label_copy);
         m.def("getBBLabels",&wrapper_BB_label_copy);
         m.def("getBBCords",&wrapper_BB_cord_copy);
+        m.def("raliCopyEncodedBoxesAndLables",&wrapper_encoded_bbox_label);
         m.def("getImgSizes",&wrapper_img_sizes_copy);
         m.def("getBoundingBoxCount",&wrapper_labels_BB_count_copy);
         m.def("getOneHotEncodedLabels",&wrapper_one_hot_label_copy );
         m.def("isEmpty",&raliIsEmpty);
+        m.def("BoxEncoder",&raliBoxEncoder);
         m.def("getTimingInfo",raliGetTimingInfo);
         // rali_api_parameter.h
         m.def("setSeed",&raliSetSeed);
@@ -263,7 +287,7 @@ namespace rali{
         m.def("UpdateFloatRand", &raliUpdateFloatUniformRand);
         m.def("UpdateIntParameter", &raliUpdateIntParameter);
         m.def("UpdateFloatParameter", &raliUpdateFloatParameter);
-        // rali_api_data_transfer.h 
+        // rali_api_data_transfer.h
         m.def("raliCopyToOutput",&wrapper);
         m.def("raliCopyToOutputTensor32",&wrapper_tensor32);
         m.def("raliCopyToOutputTensor16",&wrapper_tensor16);
@@ -273,17 +297,17 @@ namespace rali{
             py::arg("context"),
             py::arg("source_path"),
             py::arg("json_path"),
-            py::arg("color_format"),	
-            py::arg("num_threads"),	
-            py::arg("is_output"),	
-            py::arg("shuffle") = false,	
-            py::arg("loop") = false,	
-            py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,	
-            py::arg("max_width") = 0,	
+            py::arg("color_format"),
+            py::arg("num_threads"),
+            py::arg("is_output"),
+            py::arg("shuffle") = false,
+            py::arg("loop") = false,
+            py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,
+            py::arg("max_width") = 0,
             py::arg("max_height") = 0,
-            py::arg("area_factor") = NULL,	
+            py::arg("area_factor") = NULL,
             py::arg("aspect_ratio") = NULL,
-            py::arg("x_drift_factor") = NULL,	
+            py::arg("x_drift_factor") = NULL,
             py::arg("y_drift_factor") = NULL
             );
          m.def("COCO_ImageDecoderSliceShard",&raliJpegCOCOFileSourcePartialSingleShard,"Reads file from the source given and decodes it according to the policy",
@@ -291,33 +315,33 @@ namespace rali{
             py::arg("context"),
             py::arg("source_path"),
             py::arg("json_path"),
-            py::arg("color_format"),	
+            py::arg("color_format"),
             py::arg("shard_id"),
-            py::arg("shard_count"),	
-            py::arg("is_output"),	
-            py::arg("shuffle") = false,	
-            py::arg("loop") = false,	
-            py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,	
-            py::arg("max_width") = 0,	
+            py::arg("shard_count"),
+            py::arg("is_output"),
+            py::arg("shuffle") = false,
+            py::arg("loop") = false,
+            py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,
+            py::arg("max_width") = 0,
             py::arg("max_height") = 0,
-            py::arg("area_factor") = NULL,	
+            py::arg("area_factor") = NULL,
             py::arg("aspect_ratio") = NULL,
-            py::arg("x_drift_factor") = NULL,	
+            py::arg("x_drift_factor") = NULL,
             py::arg("y_drift_factor") = NULL
             );
         m.def("ImageDecoder",&raliJpegFileSource,"Reads file from the source given and decodes it according to the policy",
             py::return_value_policy::reference,
             py::arg("context"),
             py::arg("source_path"),
-            py::arg("color_format"),	
-            py::arg("num_threads"),	
-            py::arg("is_output"),	
-            py::arg("shuffle") = false,	
-            py::arg("loop") = false,	
-            py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,	
-            py::arg("max_width") = 0,	
+            py::arg("color_format"),
+            py::arg("num_threads"),
+            py::arg("is_output"),
+            py::arg("shuffle") = false,
+            py::arg("loop") = false,
+            py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,
+            py::arg("max_width") = 0,
             py::arg("max_height") = 0,
-            py::arg("dec_type") = 0);	
+            py::arg("dec_type") = 0);
         m.def("ImageDecoderShard",&raliJpegFileSourceSingleShard,"Reads file from the source given and decodes it according to the shard id and number of shards",
             py::return_value_policy::reference,
             py::arg("context"),
@@ -358,10 +382,10 @@ namespace rali{
             py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,
             py::arg("max_width") = 0,
             py::arg("max_height") = 0);
-        m.def("TF_ImageDecoder",&raliJpegTFRecordSource,"Reads file from the source given and decodes it according to the policy only for TFRecords",	
-            py::return_value_policy::reference,	
-            py::arg("p_context"),	
-            py::arg("source_path"),	
+        m.def("TF_ImageDecoder",&raliJpegTFRecordSource,"Reads file from the source given and decodes it according to the policy only for TFRecords",
+            py::return_value_policy::reference,
+            py::arg("p_context"),
+            py::arg("source_path"),
             py::arg("rali_color_format"),
             py::arg("internal_shard_count"),
             py::arg("is_output"),
@@ -422,21 +446,21 @@ namespace rali{
             py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,
             py::arg("max_width") = 0,
             py::arg("max_height") = 0);
-        m.def("FusedDecoderCrop",&raliFusedJpegCrop,"Reads file from the source and decodes them partially to output random crops",	
-            py::return_value_policy::reference,	
-            py::arg("context"),	
-            py::arg("source_path"),	
-            py::arg("color_format"),	
-            py::arg("num_threads"),	
-            py::arg("is_output"),	
-            py::arg("shuffle") = false,	
-            py::arg("loop") = false,	
-            py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,	
-            py::arg("max_width") = 0,	
-            py::arg("max_height") = 0,	
-            py::arg("area_factor") = NULL,	
-            py::arg("aspect_ratio") = NULL,	
-            py::arg("y_drift_factor") = NULL,	
+        m.def("FusedDecoderCrop",&raliFusedJpegCrop,"Reads file from the source and decodes them partially to output random crops",
+            py::return_value_policy::reference,
+            py::arg("context"),
+            py::arg("source_path"),
+            py::arg("color_format"),
+            py::arg("num_threads"),
+            py::arg("is_output"),
+            py::arg("shuffle") = false,
+            py::arg("loop") = false,
+            py::arg("decode_size_policy") = RALI_USE_MOST_FREQUENT_SIZE,
+            py::arg("max_width") = 0,
+            py::arg("max_height") = 0,
+            py::arg("area_factor") = NULL,
+            py::arg("aspect_ratio") = NULL,
+            py::arg("y_drift_factor") = NULL,
             py::arg("x_drift_factor") = NULL);
         m.def("FusedDecoderCropShard",&raliFusedJpegCropSingleShard,"Reads file from the source and decodes them partially to output random crops",
             py::return_value_policy::reference,
@@ -641,7 +665,7 @@ namespace rali{
             py::arg("context"),
             py::arg("input"),
             py::arg("is_output"),
-            py::arg("sat") = NULL);     
+            py::arg("sat") = NULL);
         m.def("WarpAffine",&raliWarpAffine,
             py::return_value_policy::reference,
             py::arg("context"),
@@ -671,7 +695,7 @@ namespace rali{
             py::arg("context"),
             py::arg("input"),
             py::arg("is_output"),
-            py::arg("sdev") = NULL); 
+            py::arg("sdev") = NULL);
         m.def("SnPNoise",&raliSnPNoise,
             py::return_value_policy::reference,
             py::arg("context"),

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -407,6 +407,18 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetContextAttribute(vx_context context, vx_
                 status = VX_SUCCESS;
             }
             break;
+#elif ENABLE_HIP
+        case VX_CONTEXT_ATTRIBUTE_AMD_HIP_DEVICE:
+            if (size == sizeof(hipDevice_t)) {
+                if (context->hip_device < 0 && agoGpuHipCreateContext(context, context->hip_device) != VX_SUCCESS) {
+                    status = VX_FAILURE;
+                }
+                else {
+                    *(int *)ptr = context->hip_device_id;
+                    status = VX_SUCCESS;
+                }
+            }
+            break;
 #endif
         default:
             status = VX_ERROR_NOT_SUPPORTED;
@@ -798,7 +810,10 @@ VX_API_ENTRY vx_image VX_API_CALL vxCreateUniformImage(vx_context context, vx_ui
     if (agoIsValidContext(context)) {
         CAgoLock lock(context->cs);
         char desc[128];
-        if (color == VX_DF_IMAGE_S16) {
+        if (color == VX_DF_IMAGE_U8) {
+            sprintf(desc, "image-uniform:%4.4s,%d,%d,%d", FORMAT_STR(color), width, height, value->U8);
+        }
+        else if (color == VX_DF_IMAGE_S16) {
             sprintf(desc, "image-uniform:%4.4s,%d,%d,%d", FORMAT_STR(color), width, height, value->S16);
         }
         else if (color == VX_DF_IMAGE_U16) {
@@ -932,6 +947,10 @@ VX_API_ENTRY vx_image VX_API_CALL vxCreateImageFromHandle(vx_context context, vx
                         data->children[i]->buffer = (vx_uint8 *)(ptrs ? ptrs[i] : nullptr);
                         data->children[i]->u.img.stride_in_bytes = addrs[i].stride_y;
                         data->children[i]->gpu_buffer_offset = 0;
+#if (ENABLE_OPENCL || ENABLE_HIP)
+                        data->children[i]->buffer_sync_flags &= ~AGO_BUFFER_SYNC_FLAG_DIRTY_MASK;
+                        data->children[i]->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_BY_COMMIT;
+#endif
                     }
                 }
                 else {
@@ -939,6 +958,10 @@ VX_API_ENTRY vx_image VX_API_CALL vxCreateImageFromHandle(vx_context context, vx
                     data->buffer = (vx_uint8 *)(ptrs ? ptrs[0] : nullptr);
                     data->u.img.stride_in_bytes = addrs[0].stride_y;
                     data->gpu_buffer_offset = 0;
+#if (ENABLE_OPENCL || ENABLE_HIP)
+                    data->buffer_sync_flags &= ~AGO_BUFFER_SYNC_FLAG_DIRTY_MASK;
+                    data->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_BY_COMMIT;
+#endif
                 }
                 data->u.img.mem_handle = vx_false_e;
             }
@@ -2103,6 +2126,11 @@ VX_API_ENTRY vx_status VX_API_CALL vxMapImagePatch(vx_image image_, const vx_rec
                         }
                     }
                 }
+                else if (usage == VX_WRITE_ONLY)
+                {
+                    auto dataToSync = img->u.img.isROI ? img->u.img.roiMasterImage : img;
+                    dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_BY_WRITE;
+                }
 #elif ENABLE_HIP
                     auto dataToSync = img->u.img.isROI ? img->u.img.roiMasterImage : img;
                     if (dataToSync->hip_memory && !(dataToSync->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED)) {
@@ -2117,6 +2145,11 @@ VX_API_ENTRY vx_status VX_API_CALL vxMapImagePatch(vx_image image_, const vx_rec
                             }
                             dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
                         }
+                    }
+                    if (usage == VX_WRITE_ONLY)
+                    {
+                        auto dataToSync = img->u.img.isROI ? img->u.img.roiMasterImage : img;
+                        dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_BY_WRITE;
                     }
 #endif
                 // get map id and set returned pointer
@@ -2316,6 +2349,34 @@ incorrect.
 VX_API_ENTRY vx_status VX_API_CALL vxUnloadKernels(vx_context context, const vx_char *module)
 {
     return agoUnloadModule(context, module);
+}
+
+/*! \brief Registers a module with kernels in a context.
+ * \details This function registers the appropriate publish and unpublish functions
+ * with the module name if the module is not a dynamic library, so <tt>\ref vxLoadKernels</tt> and
+ * <tt>\ref vxUnloadKernels</tt> can be called.
+ * \param [in] context The reference to the context the kernels must be added to.
+ * \param [in] module The short name of the module to load.
+ * \param [in] publish must add kernels to the context by calling <tt>\ref vxAddUserKernel</tt>
+ * for each new kernel. It is called by <tt>\ref vxLoadKernels</tt>.
+ * \param [in] unpublish must remove kernels from the context by calling <tt>\ref vxRemoveKernel</tt>
+ * for each kernel the <tt>vxPublishKernels</tt> has added. It is called by <tt>\ref vxUnloadKernels</tt>.
+ * \return A <tt>\ref vx_status_e</tt> enumeration.
+ * \retval VX_SUCCESS No errors; any other value indicates failure.
+ * \retval VX_ERROR_INVALID_REFERENCE context is not a valid <tt>\ref vx_context</tt> reference.
+ * \retval VX_ERROR_INVALID_PARAMETERS If any of the other parameters are incorrect.
+ * \ingroup group_user_kernels
+ * \see vxLoadKernels
+ */
+VX_API_ENTRY vx_status VX_API_CALL vxRegisterKernelLibrary(vx_context context, const vx_char *module, vx_publish_kernels_f publish, vx_unpublish_kernels_f unpublish)
+{
+    vx_status status = VX_ERROR_INVALID_REFERENCE;
+    if (agoIsValidContext(context))
+    {
+        // TBD: add support to load obj files or static libs
+        status = VX_SUCCESS;
+    }
+    return status;
 }
 
 /*! \brief Obtains a reference to a kernel using a string to specify the name.
@@ -2740,7 +2801,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetKernelAttribute(vx_kernel kernel, vx_enu
                     }
                 }
                 break;
-            case VX_KERNEL_ATTRIBUTE_AMD_OPENCL_BUFFER_ACCESS_ENABLE:
+            case VX_KERNEL_ATTRIBUTE_AMD_GPU_BUFFER_ACCESS_ENABLE:
                 if (size == sizeof(vx_bool)) {
                     if (!kernel->finalized && !kernel->gpu_buffer_update_callback_f) {
                         kernel->opencl_buffer_access_enable = *(vx_bool *)ptr;
@@ -2751,22 +2812,22 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetKernelAttribute(vx_kernel kernel, vx_enu
                     }
                 }
                 break;
-            case VX_KERNEL_ATTRIBUTE_AMD_OPENCL_BUFFER_UPDATE_CALLBACK:
-                if (size == sizeof(AgoKernelOpenclBufferUpdateInfo)) {
+            case VX_KERNEL_ATTRIBUTE_AMD_GPU_BUFFER_UPDATE_CALLBACK:
+                if (size == sizeof(AgoKernelGpuBufferUpdateInfo)) {
                     if (!kernel->finalized) {
-                        AgoKernelOpenclBufferUpdateInfo * info = (AgoKernelOpenclBufferUpdateInfo *)ptr;
-                        if (info->opencl_buffer_update_param_index >= kernel->argCount ||
+                        AgoKernelGpuBufferUpdateInfo * info = (AgoKernelGpuBufferUpdateInfo *)ptr;
+                        if (info->gpu_buffer_update_param_index >= kernel->argCount ||
                             info->gpu_buffer_update_callback_f == nullptr ||
-                            kernel->parameters[info->opencl_buffer_update_param_index].direction != VX_INPUT ||
-                            kernel->parameters[info->opencl_buffer_update_param_index].type != VX_TYPE_IMAGE ||
-                            kernel->parameters[info->opencl_buffer_update_param_index].state != VX_PARAMETER_STATE_REQUIRED)
+                            kernel->parameters[info->gpu_buffer_update_param_index].direction != VX_INPUT ||
+                            kernel->parameters[info->gpu_buffer_update_param_index].type != VX_TYPE_IMAGE ||
+                            kernel->parameters[info->gpu_buffer_update_param_index].state != VX_PARAMETER_STATE_REQUIRED)
                         {
                             // param index has to point to required input images only
                             status = VX_ERROR_INVALID_PARAMETERS;
                         }
                         else {
                             kernel->gpu_buffer_update_callback_f = info->gpu_buffer_update_callback_f;
-                            kernel->opencl_buffer_update_param_index = info->opencl_buffer_update_param_index;
+                            kernel->gpu_buffer_update_param_index = info->gpu_buffer_update_param_index;
                             kernel->opencl_buffer_access_enable = vx_true_e;
                             status = VX_SUCCESS;
                         }
@@ -2892,6 +2953,15 @@ VX_API_ENTRY vx_status VX_API_CALL vxVerifyGraph(vx_graph graph)
         if (ago_graph_dump) {
             agoWriteGraph(graph, NULL, 0, stdout, "*INPUT*");
         }
+
+        // set the AGO_DEFAULT_TARGET if it is not set by the user
+        if (!agoGetEnvironmentVariable("AGO_DEFAULT_TARGET", textBuffer, sizeof(textBuffer))) {
+#if ENABLE_OPENCL || ENABLE_HIP
+            agoSetEnvironmentVariable("AGO_DEFAULT_TARGET", "GPU");
+#else
+            agoSetEnvironmentVariable("AGO_DEFAULT_TARGET", "CPU");
+#endif
+    }
 
         // verify graph per OpenVX specification
         status = agoVerifyGraph(graph);
@@ -3360,6 +3430,14 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryNode(vx_node node, vx_enum attribute, 
                     status = VX_SUCCESS;
                 }
                 break;
+#elif ENABLE_HIP
+            case VX_NODE_ATTRIBUTE_AMD_HIP_STREAM:
+                if (size == sizeof(hipStream_t)){
+                    AgoGraph * graph = (AgoGraph *)node->ref.scope;
+                    *(hipStream_t *)ptr = graph->hip_stream0;
+                    status = VX_SUCCESS;
+            }
+            break;
 #endif
             default:
                 status = VX_ERROR_NOT_SUPPORTED;
@@ -5688,7 +5766,7 @@ VX_API_ENTRY vx_threshold VX_API_CALL vxCreateThresholdForImage(vx_context conte
                     agoGenerateDataName(context, "thr", data->name);
                     agoAddData(&context->dataList, data);
 
-                    switch (output_format)
+                    switch (input_format)
                     {
                         case VX_DF_IMAGE_RGB:
                         {
@@ -5958,6 +6036,22 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyThresholdValue(vx_threshold thresh, vx_
                     dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
                 }
             }
+#elif ENABLE_HIP
+            if (dataToSync->hip_memory && !(dataToSync->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED)) {
+                // make sure dirty HIP buffers are synched before giving access for read
+                if (dataToSync->buffer_sync_flags & (AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE_CL)) {
+                    // transfer only valid data
+                    if (dataToSync->size > 0) {
+                        hipError_t err = hipMemcpyDtoH((void *)dataToSync->buffer, dataToSync->hip_memory + dataToSync->gpu_buffer_offset, dataToSync->size);
+                        if (err) {
+                            status = VX_FAILURE;
+                            agoAddLogEntry(&dataToSync->ref, status, "ERROR: vxCopyThresholdValue: hipMemcpyDtoH() => %d\n", err);
+                            return status;
+                        }
+                    }
+                    dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
+                }
+            }
 #endif
                 if (usage == VX_READ_ONLY){
                     //*(vx_int32 *)value_ptr = data->u.thr.threshold_lower;
@@ -6027,6 +6121,22 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyThresholdRange(vx_threshold thresh, vx_
                     dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
                 }
             }
+#elif ENABLE_HIP
+            if (dataToSync->hip_memory && !(dataToSync->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED)) {
+                // make sure dirty HIP buffers are synched before giving access for read
+                if (dataToSync->buffer_sync_flags & (AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE_CL)) {
+                    // transfer only valid data
+                    if (dataToSync->size > 0) {
+                        hipError_t err = hipMemcpyDtoH((void *)dataToSync->buffer, dataToSync->hip_memory + dataToSync->gpu_buffer_offset, dataToSync->size);
+                        if (err) {
+                            status = VX_FAILURE;
+                            agoAddLogEntry(&dataToSync->ref, status, "ERROR: vxCopyThresholdValue: hipMemcpyDtoH() => %d\n", err);
+                            return status;
+                        }
+                    }
+                    dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
+                }
+            }
 #endif
                 if (usage == VX_READ_ONLY){
                     memcpy(lower_value_ptr, &data->u.thr.threshold_lower, sizeof(vx_pixel_value_t));
@@ -6085,6 +6195,22 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyThresholdOutput(vx_threshold thresh, vx
                         if (err) {
                             status = VX_FAILURE;
                             agoAddLogEntry(&dataToSync->ref, status, "ERROR: vxCopyThresholdValue: clEnqueueReadBuffer() => %d\n", err);
+                            return status;
+                        }
+                    }
+                    dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
+                }
+            }
+#elif ENABLE_HIP
+            if (dataToSync->hip_memory && !(dataToSync->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED)) {
+                // make sure dirty HIP buffers are synched before giving access for read
+                if (dataToSync->buffer_sync_flags & (AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE_CL)) {
+                    // transfer only valid data
+                    if (dataToSync->size > 0) {
+                        hipError_t err = hipMemcpyDtoH((void *)dataToSync->buffer, dataToSync->hip_memory + dataToSync->gpu_buffer_offset, dataToSync->size);
+                        if (err) {
+                            status = VX_FAILURE;
+                            agoAddLogEntry(&dataToSync->ref, status, "ERROR: vxCopyThresholdValue: hipMemcpyDtoH() => %d\n", err);
                             return status;
                         }
                     }
@@ -7402,6 +7528,22 @@ VX_API_ENTRY vx_status VX_API_CALL vxCopyRemapPatch(vx_remap remap,
                     dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
                 }
             }
+#elif ENABLE_HIP
+            if (dataToSync->hip_memory  && !(dataToSync->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED)) {
+                // make sure dirty HIP buffers are synched before giving access for read
+                if (dataToSync->buffer_sync_flags & (AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE_CL)) {
+                    // transfer only valid data
+                    if (dataToSync->size > 0) {
+                        hipError_t err = hipMemcpyDtoH((void *)dataToSync->buffer, dataToSync->hip_memory + dataToSync->gpu_buffer_offset, dataToSync->size);
+                        if (err) {
+                            status = VX_FAILURE;
+                            agoAddLogEntry(&dataToSync->ref, status, "ERROR: vxCopyRemapPatch: hipMemcpyDtoH() => %d\n", err);
+                            return status;
+                        }
+                    }
+                    dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
+                }
+            }
 #endif
             if (usage == VX_READ_ONLY) {
                 vx_coordinates2df_t *ptr = (vx_coordinates2df_t*)user_ptr;
@@ -7567,7 +7709,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxMapRemapPatch(vx_remap remap,
 
             vx_size stride = (end_x - start_x);
             vx_size size = (stride * (end_y - start_y)) * sizeof(vx_coordinates2df_t);
-            vx_uint8 * ptr_returned = data->buffer + size;
+            ago_coord2d_float_t* ptr_returned = (ago_coord2d_float_t *)data->reserved;
 
             // save the pointer and usage for use in vxUnmapRemapPatch
             status = VX_SUCCESS;
@@ -7596,11 +7738,28 @@ VX_API_ENTRY vx_status VX_API_CALL vxMapRemapPatch(vx_remap remap,
                         dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
                     }
                 }
+#elif ENABLE_HIP
+                if (dataToSync->hip_memory  && !(dataToSync->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED)) {
+                    // make sure dirty HIP buffers are synched before giving access for read
+                    if (dataToSync->buffer_sync_flags & (AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE_CL)) {
+                        // transfer only valid data
+                        if (dataToSync->size > 0) {
+                            hipError_t err = hipMemcpyDtoH((void *)dataToSync->buffer, dataToSync->hip_memory + dataToSync->gpu_buffer_offset, dataToSync->size);
+                            if (err) {
+                                status = VX_FAILURE;
+                                agoAddLogEntry(&dataToSync->ref, status, "ERROR: vxMapRemapPatch: hipMemcpyDtoH() => %d\n", err);
+                                return status;
+                            }
+                        }
+                        dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
+                    }
+                }
 #endif
                 MappedData item = { data->nextMapId++, ptr_returned, usage, false };
                 data->mapped.push_back(item);
                 *map_id = item.map_id;
                 *ptr = ptr_returned;
+                *stride_y = stride * sizeof(vx_coordinates2df_t);
             }
         }
     }
@@ -7955,6 +8114,44 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryArray(vx_array arr, vx_enum attribute,
                     status = VX_SUCCESS;
                 }
                 break;
+#if (ENABLE_OPENCL||ENABLE_HIP)
+            case VX_ARRAY_OFFSET_GPU:
+                if (size == sizeof(vx_size)) {
+                    *(vx_size *)ptr = data->gpu_buffer_offset;
+                    status = VX_SUCCESS;
+                }
+                break;
+#if ENABLE_OPENCL
+            case VX_ARRAY_BUFFER_OPENCL:
+                if (size == sizeof(cl_mem)) {
+                    if (data->opencl_buffer) {
+                        *(cl_mem *)ptr = data->opencl_buffer;
+                    }
+                    else {
+#if defined(CL_VERSION_2_0)
+                        *(vx_uint8 **)ptr = data->opencl_svm_buffer;
+#else
+                        *(vx_uint8 **)ptr = NULL;
+#endif
+                    }
+                    status = VX_SUCCESS;
+                }
+                break;
+#else
+            case VX_ARRAY_BUFFER_HIP:
+                if (size == sizeof(vx_uint8 *)) {
+                    if (data->hip_memory) {
+                        *(vx_uint8 **)ptr = data->hip_memory;
+                    }
+                    else {
+                        *(vx_uint8 **)ptr = NULL;
+                    }
+                    status = VX_SUCCESS;
+                }
+                break;
+
+#endif
+#endif
             default:
                 status = VX_ERROR_NOT_SUPPORTED;
                 break;
@@ -8015,6 +8212,23 @@ VX_API_ENTRY vx_status VX_API_CALL vxAddArrayItems(vx_array arr, vx_size count, 
                             if (err) {
                                 status = VX_FAILURE;
                                 agoAddLogEntry(&data->ref, status, "ERROR: vxAccessArrayRange: clEnqueueReadBuffer() => %d\n", err);
+                                return status;
+                            }
+                        }
+                        data->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
+                    }
+                }
+#elif ENABLE_HIP
+                if (data->hip_memory && !(data->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED)) {
+                    // make sure dirty HIP buffers are synched before giving access for read
+                    if (data->buffer_sync_flags & (AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE_CL)) {
+                        // transfer only valid data
+                        vx_size size = data->u.arr.itemsize * data->u.arr.numitems;
+                        if (size > 0) {
+                            hipError_t err = hipMemcpyDtoH((void *)data->buffer, data->hip_memory + data->gpu_buffer_offset, data->size);
+                            if (err) {
+                                status = VX_FAILURE;
+                                agoAddLogEntry(&data->ref, status, "ERROR: vxAccessArrayRange: hipMemcpyDtoH() => %d\n", err);
                                 return status;
                             }
                         }
@@ -8485,7 +8699,7 @@ VX_API_ENTRY vx_object_array VX_API_CALL vxCreateObjectArray(vx_context context,
     if (agoIsValidContext(context) && agoIsValidReference(exemplar) && count > 0) {
         CAgoLock lock(context->cs);
         char desc_exemplar[512]; agoGetDescriptionFromData(context, desc_exemplar, (AgoData *)exemplar);
-        char desc[512]; sprintf(desc, "objectarray:" VX_FMT_SIZE ",[%s]", count, desc_exemplar);
+        char desc[1024]; sprintf(desc, "objectarray:" VX_FMT_SIZE ",[%s]", count, desc_exemplar);
         data = agoCreateDataFromDescription(context, NULL, desc, true);
         if (data) {
             agoGenerateDataName(context, "objectarray", data->name);
@@ -8698,7 +8912,7 @@ VX_API_ENTRY vx_object_array VX_API_CALL vxCreateVirtualObjectArray(vx_graph gra
     if (agoIsValidGraph(graph) && agoIsValidReference(exemplar) && count > 0) {
         CAgoLock lock(graph->cs);
         char desc_exemplar[512]; agoGetDescriptionFromData(graph->ref.context, desc_exemplar, (AgoData *)exemplar);
-        char desc[512]; sprintf(desc, "objectarray:" VX_FMT_SIZE ",[%s]", count, desc_exemplar);
+        char desc[1024]; sprintf(desc, "objectarray:" VX_FMT_SIZE ",[%s]", count, desc_exemplar);
         data = agoCreateDataFromDescription(graph->ref.context, NULL, desc, true);
         if (data) {
             agoGenerateVirtualDataName(graph, "objectarray", data->name);
@@ -8974,7 +9188,7 @@ VX_API_ENTRY vx_status VX_API_CALL vxSetMetaFormatAttribute(vx_meta_format meta,
                     status = VX_SUCCESS;
                 }
                 break;
-#if ENABLE_OPENCL
+#if ENABLE_OPENCL || ENABLE_HIP
             case VX_IMAGE_ATTRIBUTE_AMD_ENABLE_USER_BUFFER_GPU:
                 if (size == sizeof(vx_bool) && meta->data.ref.type == VX_TYPE_IMAGE) {
                     meta->data.u.img.enableUserBufferGPU = *(vx_bool *)ptr;
@@ -9533,13 +9747,13 @@ VX_API_ENTRY vx_status VX_API_CALL vxQueryTensor(vx_tensor tensor, vx_enum attri
                 }
                 break;
 #if (ENABLE_OPENCL||ENABLE_HIP)
-            case VX_TENSOR_OFFSET_OPENCL:
+            case VX_TENSOR_OFFSET_GPU:
                 if (size == sizeof(vx_size)) {
                     *(vx_size *)ptr = data->u.tensor.offset;
                     status = VX_SUCCESS;
                 }
                 break;
-            case VX_TENSOR_STRIDE_OPENCL:
+            case VX_TENSOR_STRIDE_GPU:
                 if (size >= sizeof(vx_size)*data->u.tensor.num_dims) {
                     for (vx_size i = 0; i < data->u.tensor.num_dims; i++) {
                         ((vx_size *)ptr)[i] = data->u.tensor.stride[i];

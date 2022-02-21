@@ -1,5 +1,5 @@
 /* 
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -537,6 +537,7 @@ int agoPublishKernels(AgoContext * acontext)
 		kernel->kernOpInfo = ago_kernel_list[i].kernOpInfo;
 		kernel->finalized = true;
 		kernel->ref.internal_count = 1;
+		kernel->user_kernel = false;
 		strcpy(kernel->name, ago_kernel_list[i].name);
 		memcpy(kernel->argConfig, ago_kernel_list[i].argConfig, sizeof(kernel->argConfig));
 		kernel->argCount = 0;

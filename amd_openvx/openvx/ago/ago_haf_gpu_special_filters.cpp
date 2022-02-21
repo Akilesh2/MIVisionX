@@ -1,5 +1,5 @@
 /* 
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1403,7 +1403,7 @@ int HafGpu_ScaleGaussianHalf(AgoNode * node)
 	int work_group_width = 16;
 	int work_group_height = 16;
 	int width = node->paramList[0]->u.img.width;
-	int height = node->paramList[0]->u.img.height;
+	int height = node->paramList[0]->u.img.height - 1;
 	int N = 0;
 	if (node->akernel->id == VX_KERNEL_AMD_SCALE_GAUSSIAN_HALF_U8_U8_3x3) {
 		N = 3;
@@ -1444,8 +1444,9 @@ int HafGpu_ScaleGaussianHalf(AgoNode * node)
 		)
 		, work_group_width, work_group_height, NODE_OPENCL_KERNEL_NAME, LMemSize, (width + 3) / 4, height);
 	node->opencl_code = item;
+	int srcImageBufferSize = node->paramList[1]->size;
 	// load input image into local
-	if (HafGpu_Load_Local(work_group_width, work_group_height, LMemStride, work_group_height * 2 - 1 + LMemSideTB * 2, LMemSideLR, LMemSideTB, node->opencl_code) < 0) {
+	if (HafGpu_Load_Local_ImageSize(work_group_width, work_group_height, LMemStride, work_group_height * 2 - 1 + LMemSideTB * 2, LMemSideLR, LMemSideTB, node->opencl_code, srcImageBufferSize) < 0) {
 		return -1;
 	}
 	// perform filtering
@@ -1540,7 +1541,7 @@ int HafGpu_ScaleGaussianHalf(AgoNode * node)
 			"  L0.s01 = vload2(0, (__local uint *)&lbuf_ptr[%d]);\n" // LMemStride * 4
 			"  sum.s0 += (float)(L0.s0 & 0xffff); sum.s1 += (float)(L0.s0 >> 16); sum.s2 += (float)(L0.s1 & 0xffff); sum.s3 += (float)(L0.s1 >> 16);\n"
 			"  sum = sum * (float4)0.00390625f;\n"
-			"  if (valid) {;\n"
+			"  if (valid) {\n"
 			"    *(__global uint *)p0_buf = amd_pack(sum);\n"
 			"  }\n"
 			"}\n"

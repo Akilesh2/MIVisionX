@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -117,6 +117,7 @@ THE SOFTWARE.
 #define AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE      0x00000002 // buffer dirty by node
 #define AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE_CL   0x00000004 // OpenCL buffer dirty by node
 #define AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED      0x00000008 // OpenCL buffer has been synced
+#define AGO_BUFFER_SYNC_FLAG_DIRTY_BY_WRITE     0x00000010 // buffer dirty by write
 
 // AGO graph optimizer
 #define AGO_GRAPH_OPTIMIZER_FLAG_NO_DIVIDE                0x00000001 // don't run drama divide
@@ -168,8 +169,8 @@ THE SOFTWARE.
 #endif
 // opencl related constants
 #define DATA_GPU_ARRAY_OFFSET             16  // first 16 bytes of array buffer will be used for numitems
-// opencl image fixed byte offset
-#define OPENCL_IMAGE_FIXED_OFFSET             256
+// GPU image fixed byte offset
+#define GPU_IMAGE_FIXED_OFFSET             256
 
 // thread scheduling configuration
 #define CONFIG_THREAD_DEFAULT                 1  // 0:disable 1:enable separate threads for graph scheduling
@@ -530,8 +531,8 @@ struct AgoKernel {
     amd_kernel_opencl_codegen_callback_f opencl_codegen_callback_f;
     amd_kernel_node_regen_callback_f regen_callback_f;
     amd_kernel_opencl_global_work_update_callback_f opencl_global_work_update_callback_f;
-    amd_kernel_opencl_buffer_update_callback_f gpu_buffer_update_callback_f;
-    vx_uint32 opencl_buffer_update_param_index;
+    amd_kernel_gpu_buffer_update_callback_f gpu_buffer_update_callback_f;
+    vx_uint32 gpu_buffer_update_param_index;
     vx_bool opencl_buffer_access_enable;
     vx_uint32 importing_module_index_plus1;
 public:
@@ -606,12 +607,12 @@ struct AgoNode {
     vx_perf_t perf;
     vx_bool local_data_change_is_enabled;
     vx_bool local_data_set_by_implementation;
+    struct { bool enable; int paramIndexScalar; int paramIndexArray; } gpu_scalar_array_output_sync;
 #if ENABLE_OPENCL
     vx_uint32 opencl_type;
-    char opencl_name[VX_MAX_KERNEL_NAME];
+    char opencl_name[VX_MAX_KERNEL_NAME+8];
     std::string opencl_code;
     std::string opencl_build_options;
-    struct { bool enable; int paramIndexScalar; int paramIndexArray; } opencl_scalar_array_output_sync;
     vx_uint32 opencl_param_mem2reg_mask;
     vx_uint32 opencl_param_discard_mask;
     vx_uint32 opencl_param_as_value_mask;

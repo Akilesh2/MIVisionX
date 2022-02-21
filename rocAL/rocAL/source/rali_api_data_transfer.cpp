@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,9 @@ THE SOFTWARE.
 #include "commons.h"
 #include "context.h"
 #include "rali_api.h"
+#if !ENABLE_HIP
 #include "CL/cl.h"
+#endif
 
 RaliStatus RALI_API_CALL
 raliCopyToOutputTensor32(RaliContext p_context, float *out_ptr, RaliTensorLayout tensor_format, float multiplier0,
@@ -72,7 +74,7 @@ raliCopyToOutputTensor16(RaliContext p_context, half *out_ptr, RaliTensorLayout 
 RaliStatus RALI_API_CALL
 raliCopyToOutput(
         RaliContext p_context,
-        cl_mem out_ptr,
+        void* out_ptr,
         size_t out_size)
 {
     auto context = static_cast<Context*>(p_context);

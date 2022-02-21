@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2017 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,11 @@ THE SOFTWARE.
 */
 
 #include "kernels.h"
+#if ENABLE_OPENCL
 #include <miopengemm/gemm.hpp>
+#elif ENABLE_HIP
+#include <rocblas.h>
+#endif
 #include <algorithm>
 
 struct LocalData {
@@ -33,9 +37,18 @@ struct LocalData {
     size_t i_offset, ldi;
     size_t c_offset, ldc;
     int ID;
+#if ENABLE_OPENCL
     cl_kernel copy_kernel;
     size_t copy_global[3];
     size_t copy_local[3];
+#elif ENABLE_HIP
+    vx_enum type;
+    vx_size width, height;
+    float alpha, beta;
+    vx_uint8 *input1_mem, *input2_mem, *input3_mem, *output_mem;
+    hipStream_t hip_stream;
+    rocblas_handle rocBlasHandle;
+#endif
 };
 
 static vx_status VX_CALLBACK validate(vx_node node, const vx_reference parameters[], vx_uint32 num, vx_meta_format metas[])
@@ -204,12 +217,12 @@ static vx_status VX_CALLBACK initialize(vx_node node, const vx_reference *parame
 
     // get buffer offsets and stride
     vx_size a_stride[4], b_stride[4], c_stride[4];
-    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_STRIDE_OPENCL, a_stride, sizeof(a_stride)));
-    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[1], VX_TENSOR_STRIDE_OPENCL, b_stride, sizeof(b_stride)));
-    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[4], VX_TENSOR_STRIDE_OPENCL, c_stride, sizeof(c_stride)));
-    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_OFFSET_OPENCL, &data->a_offset, sizeof(vx_size)));
-    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[1], VX_TENSOR_OFFSET_OPENCL, &data->b_offset, sizeof(vx_size)));
-    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[4], VX_TENSOR_OFFSET_OPENCL, &data->c_offset, sizeof(vx_size)));
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_STRIDE_GPU, a_stride, sizeof(a_stride)));
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[1], VX_TENSOR_STRIDE_GPU, b_stride, sizeof(b_stride)));
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[4], VX_TENSOR_STRIDE_GPU, c_stride, sizeof(c_stride)));
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_OFFSET_GPU, &data->a_offset, sizeof(vx_size)));
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[1], VX_TENSOR_OFFSET_GPU, &data->b_offset, sizeof(vx_size)));
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[4], VX_TENSOR_OFFSET_GPU, &data->c_offset, sizeof(vx_size)));
     data->a_offset >>= 2;
     data->b_offset >>= 2;
     data->c_offset >>= 2;
@@ -233,12 +246,13 @@ static vx_status VX_CALLBACK initialize(vx_node node, const vx_reference *parame
     }
     if(parameters[2]) {
         vx_size i_stride[4];
-        ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_STRIDE_OPENCL, i_stride, sizeof(c_stride)));
-        ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_OFFSET_OPENCL, &data->i_offset, sizeof(vx_size)));
+        ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_STRIDE_GPU, i_stride, sizeof(c_stride)));
+        ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_OFFSET_GPU, &data->i_offset, sizeof(vx_size)));
         data->i_offset >>= 2;
         data->ldi = i_stride[data->tI ? 2 : 1] >> 2;
     }
 
+#if ENABLE_OPENCL
     // input and output memory
     cl_mem input1_mem = nullptr, input2_mem = nullptr, input3_mem = nullptr, output_mem = nullptr;
     ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_OPENCL, &input1_mem, sizeof(cl_mem)));
@@ -354,7 +368,6 @@ static vx_status VX_CALLBACK initialize(vx_node node, const vx_reference *parame
         ERROR_CHECK_STATUS(clEnqueueNDRangeKernel(data->handle->cmdq, data->copy_kernel, 3, nullptr, data->copy_global, data->copy_local, 0, nullptr, nullptr));
         ERROR_CHECK_STATUS(clFinish(data->handle->cmdq));
     }
-
     // build and save ID
     MIOpenGEMM::GemmStatus status =
         MIOpenGEMM::xgemm<float>(false, data->tA, data->tB, data->m, data->n, data->k,
@@ -371,6 +384,109 @@ static vx_status VX_CALLBACK initialize(vx_node node, const vx_reference *parame
     }
     ERROR_CHECK_STATUS(clFinish(data->handle->cmdq));
     data->ID = status.ID;
+#elif ENABLE_HIP
+    rocblas_status rstatus = rocblas_create_handle(&data->rocBlasHandle);
+    if (rstatus != rocblas_status_success) {
+        printf("ERROR: rocblas_create_handle failed\n");
+        return VX_FAILURE;
+    }
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HIP, &data->input1_mem, sizeof(data->input1_mem)));
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[1], VX_TENSOR_BUFFER_HIP, &data->input2_mem, sizeof(data->input2_mem)));
+    ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[4], VX_TENSOR_BUFFER_HIP, &data->output_mem, sizeof(data->output_mem)));
+    if(parameters[2]) {
+        ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HIP, &data->input3_mem, sizeof(data->input3_mem)));
+    }
+    data->type = type;
+    data->width = input3_dims[0];
+    data->height = input3_dims[1];
+    // if input3 is available, launch HIP kernel for copy/transpose
+    if(parameters[2]) {
+        ERROR_CHECK_STATUS(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->hip_stream, sizeof(data->hip_stream)));
+        if (HipExec_copy(data->hip_stream, data->type, data->input3_mem, data->output_mem, data->width, data->height, data->ldi, data->i_offset,
+            data->ldc, data->c_offset, data->tI)) {
+            return VX_FAILURE;
+        }
+        hipStreamSynchronize(data->hip_stream);
+    }
+
+    data->alpha = 1.0f;
+    data->beta  = parameters[2] ? 1.0f : 0.0f;
+
+    //rocBLAS array storage format is column major
+    std::swap(data->input1_mem, data->input2_mem);
+    std::swap(data->a_offset, data->b_offset);
+    std::swap(data->tA, data->tB);
+    std::swap(data->m, data->n);
+    std::swap(data->lda, data->ldb);
+
+    switch (data->type) {
+        case VX_TYPE_FLOAT32:
+            rstatus = rocblas_gemm_ex(
+                        data->rocBlasHandle,
+                        data->tA ? rocblas_operation_transpose : rocblas_operation_none,
+                        data->tB ? rocblas_operation_transpose : rocblas_operation_none,
+                        data->m,
+                        data->n,
+                        data->k,
+                        &data->alpha,
+                        reinterpret_cast<const float*>(data->input1_mem) + data->a_offset,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        data->lda,
+                        reinterpret_cast<const float*>(data->input2_mem) + data->b_offset,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        data->ldb,
+                        &data->beta,
+                        reinterpret_cast<const float*>(data->output_mem) + data->c_offset,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        data->ldc,
+                        reinterpret_cast<float*>(data->output_mem) + data->c_offset,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        data->ldc,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        rocblas_gemm_algo::rocblas_gemm_algo_standard,
+                        0,
+                        0);
+            if (rstatus != rocblas_status_success) {
+                printf("ERROR: rocblas_gemm_ex failed\n");
+                return VX_FAILURE;
+            }
+            break;
+        case VX_TYPE_FLOAT16:
+            rstatus = rocblas_gemm_ex(
+                        data->rocBlasHandle,
+                        data->tA ? rocblas_operation_transpose : rocblas_operation_none,
+                        data->tB ? rocblas_operation_transpose : rocblas_operation_none,
+                        data->m,
+                        data->n,
+                        data->k,
+                        &data->alpha,
+                        reinterpret_cast<const rocblas_half*>(data->input1_mem) + data->a_offset,
+                        rocblas_datatype::rocblas_datatype_f16_r,
+                        data->lda,
+                        reinterpret_cast<const rocblas_half*>(data->input2_mem) + data->b_offset,
+                        rocblas_datatype::rocblas_datatype_f16_r,
+                        data->ldb,
+                        &data->beta,
+                        reinterpret_cast<const rocblas_half*>(data->output_mem) + data->c_offset,
+                        rocblas_datatype::rocblas_datatype_f16_r,
+                        data->ldc,
+                        reinterpret_cast<rocblas_half*>(data->output_mem) + data->c_offset,
+                        rocblas_datatype::rocblas_datatype_f16_r,
+                        data->ldc,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        rocblas_gemm_algo::rocblas_gemm_algo_standard,
+                        0,
+                        0);
+            if (rstatus != rocblas_status_success) {
+                printf("ERROR: rocblas_gemm_ex failed\n");
+                return VX_FAILURE;
+            }
+        break;
+        default:
+            printf("ERROR: unsupported data type!\n");
+            return VX_FAILURE;
+    }
+#endif
 
     // save local data ptr as node attribute
     ERROR_CHECK_STATUS(vxSetNodeAttribute(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
@@ -381,9 +497,10 @@ static vx_status VX_CALLBACK process(vx_node node, const vx_reference * paramete
 {
     // get parameters and buffers
     LocalData * data = nullptr;
-    cl_mem input1_mem = nullptr, input2_mem = nullptr, input3_mem = nullptr, output_mem = nullptr;
     ERROR_CHECK_STATUS(vxQueryNode(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
     if(!data) return VX_FAILURE;
+#if ENABLE_OPENCL
+    cl_mem input1_mem = nullptr, input2_mem = nullptr, input3_mem = nullptr, output_mem = nullptr;
     ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_OPENCL, &input1_mem, sizeof(cl_mem)));
     ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[1], VX_TENSOR_BUFFER_OPENCL, &input2_mem, sizeof(cl_mem)));
     ERROR_CHECK_STATUS(vxQueryTensor((vx_tensor)parameters[4], VX_TENSOR_BUFFER_OPENCL, &output_mem, sizeof(cl_mem)));
@@ -394,7 +511,6 @@ static vx_status VX_CALLBACK process(vx_node node, const vx_reference * paramete
         ERROR_CHECK_STATUS(clSetKernelArg(data->copy_kernel, 1, sizeof(cl_mem), &output_mem));
         ERROR_CHECK_STATUS(clEnqueueNDRangeKernel(data->handle->cmdq, data->copy_kernel, 3, nullptr, data->copy_global, data->copy_local, 0, nullptr, nullptr));
     }
-
     // run GEMM
     MIOpenGEMM::GemmStatus status =
         MIOpenGEMM::xgemm<float>(false, data->tA, data->tB, data->m, data->n, data->k, 1.0f,
@@ -406,6 +522,85 @@ static vx_status VX_CALLBACK process(vx_node node, const vx_reference * paramete
     if(!status.success) {
         return VX_FAILURE;
     }
+#elif ENABLE_HIP
+    rocblas_status rstatus;
+    if (parameters[2]) {
+        // copy/transpose input3 to output
+        if (HipExec_copy(data->hip_stream, data->type, data->input3_mem, data->output_mem, data->width, data->height, data->ldi, data->i_offset,
+            data->ldc, data->c_offset, data->tI)) {
+            return VX_FAILURE;
+        }
+    }
+
+    switch (data->type) {
+        case VX_TYPE_FLOAT32:
+            rstatus = rocblas_gemm_ex(
+                        data->rocBlasHandle,
+                        data->tA ? rocblas_operation_transpose : rocblas_operation_none,
+                        data->tB ? rocblas_operation_transpose : rocblas_operation_none,
+                        data->m,
+                        data->n,
+                        data->k,
+                        &data->alpha,
+                        reinterpret_cast<const float*>(data->input1_mem) + data->a_offset,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        data->lda,
+                        reinterpret_cast<const float*>(data->input2_mem) + data->b_offset,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        data->ldb,
+                        &data->beta,
+                        reinterpret_cast<const float*>(data->output_mem) + data->c_offset,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        data->ldc,
+                        reinterpret_cast<float*>(data->output_mem) + data->c_offset,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        data->ldc,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        rocblas_gemm_algo::rocblas_gemm_algo_standard,
+                        0,
+                        0);
+            if (rstatus != rocblas_status_success) {
+                printf("ERROR: rocblas_gemm_ex failed\n");
+                return VX_FAILURE;
+            }
+            break;
+        case VX_TYPE_FLOAT16:
+            rstatus = rocblas_gemm_ex(
+                        data->rocBlasHandle,
+                        data->tA ? rocblas_operation_transpose : rocblas_operation_none,
+                        data->tB ? rocblas_operation_transpose : rocblas_operation_none,
+                        data->m,
+                        data->n,
+                        data->k,
+                        &data->alpha,
+                        reinterpret_cast<const rocblas_half*>(data->input1_mem) + data->a_offset,
+                        rocblas_datatype::rocblas_datatype_f16_r,
+                        data->lda,
+                        reinterpret_cast<const rocblas_half*>(data->input2_mem) + data->b_offset,
+                        rocblas_datatype::rocblas_datatype_f16_r,
+                        data->ldb,
+                        &data->beta,
+                        reinterpret_cast<const rocblas_half*>(data->output_mem) + data->c_offset,
+                        rocblas_datatype::rocblas_datatype_f16_r,
+                        data->ldc,
+                        reinterpret_cast<rocblas_half*>(data->output_mem) + data->c_offset,
+                        rocblas_datatype::rocblas_datatype_f16_r,
+                        data->ldc,
+                        rocblas_datatype::rocblas_datatype_f32_r,
+                        rocblas_gemm_algo::rocblas_gemm_algo_standard,
+                        0,
+                        0);
+            if (rstatus != rocblas_status_success) {
+                printf("ERROR: rocblas_gemm_ex failed\n");
+                return VX_FAILURE;
+            }
+        break;
+        default:
+            printf("ERROR: unsupported data type!\n");
+            return VX_FAILURE;
+    }
+
+#endif
 
     return VX_SUCCESS;
 }
@@ -415,9 +610,19 @@ static vx_status VX_CALLBACK uninitialize(vx_node node, const vx_reference *para
     LocalData * data = nullptr;
     ERROR_CHECK_STATUS(vxQueryNode(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
     if (data) {
+#if ENABLE_OPENCL
         if(data->copy_kernel) {
             clReleaseKernel(data->copy_kernel);
         }
+#elif ENABLE_HIP
+        if (data->rocBlasHandle) {
+            rocblas_status rstatus = rocblas_destroy_handle(data->rocBlasHandle);
+            if (rstatus != rocblas_status_success) {
+                printf("ERROR: rocblas_destroy_handle failed\n");
+                return VX_FAILURE;
+            }
+        }
+#endif
         ERROR_CHECK_STATUS(releaseGraphHandle(node, data->handle));
         delete data;
     }
@@ -432,7 +637,7 @@ vx_status publishTensorMatrixMultiply(vx_context context)
 
     // enable OpenCL buffer access since the kernel_f callback uses OpenCL buffers instead of host accessible buffers
     vx_bool enableBufferAccess = vx_true_e;
-    ERROR_CHECK_STATUS(vxSetKernelAttribute(kernel, VX_KERNEL_ATTRIBUTE_AMD_OPENCL_BUFFER_ACCESS_ENABLE, &enableBufferAccess, sizeof(enableBufferAccess)));
+    ERROR_CHECK_STATUS(vxSetKernelAttribute(kernel, VX_KERNEL_ATTRIBUTE_AMD_GPU_BUFFER_ACCESS_ENABLE, &enableBufferAccess, sizeof(enableBufferAccess)));
 
     // set kernel parameters
     ERROR_CHECK_STATUS(vxAddParameterToKernel(kernel, 0, VX_INPUT, VX_TYPE_TENSOR, VX_PARAMETER_STATE_REQUIRED));

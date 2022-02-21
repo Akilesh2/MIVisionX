@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -59,13 +59,13 @@ ImageSourceEvaluator::find_max_dimension()
 {
     _reader->reset();
 
-    while( _reader->count() ) 
+    while( _reader->count_items() ) 
     {
         size_t fsize = _reader->open();
         if( (fsize) == 0 )
             continue;
         _header_buff.resize(fsize);
-        auto actual_read_size = _reader->read(_header_buff.data(), fsize);
+        auto actual_read_size = _reader->read_data(_header_buff.data(), fsize);
         _reader->close();
         
         int width, height, jpeg_sub_samp;

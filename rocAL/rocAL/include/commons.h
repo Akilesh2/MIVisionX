@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -67,7 +67,18 @@ enum class RaliColorFormat
 enum class RaliMemType 
 {
     HOST = 0,
-    OCL
+    OCL,
+    HIP
+};
+
+/*! \brief Decoder mode for Video decoding
+ * 
+ *  Currently supports Software decoding, will support Hardware decoding in future
+ */
+enum class DecodeMode
+{
+    HW_VAAPI = 0,
+    CPU = 1
 };
 
 struct Timing
@@ -85,4 +96,7 @@ struct Timing
     long long unsigned bb_load_time= 0;
     long long unsigned mask_load_time = 0;
     long long unsigned shuffle_time = 0;
+    long long unsigned video_read_time= 0;
+    long long unsigned video_decode_time= 0;
+    long long unsigned video_process_time= 0;
 };

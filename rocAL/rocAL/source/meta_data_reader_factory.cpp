@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include "meta_data_reader_factory.h"
 #include "exception.h"
 #include "coco_meta_data_reader.h"
+#include "coco_meta_data_reader_key_points.h"
 #include "text_file_meta_data_reader.h"
 #include "cifar10_meta_data_reader.h"
 #include "tf_meta_data_reader.h"
@@ -34,6 +35,8 @@ THE SOFTWARE.
 #include "caffe2_meta_data_reader.h"
 #include "caffe2_meta_data_reader_detection.h"
 #include "tf_meta_data_reader_detection.h"
+#include "video_label_reader.h"
+#include "mxnet_meta_data_reader.h"
 
 std::shared_ptr<MetaDataReader> create_meta_data_reader(const MetaDataConfig& config) {
     switch(config.reader_type()) {
@@ -46,6 +49,17 @@ std::shared_ptr<MetaDataReader> create_meta_data_reader(const MetaDataConfig& co
             return ret;
         }
             break;
+#ifdef RALI_VIDEO
+        case MetaDataReaderType::VIDEO_LABEL_READER:
+        {
+            if(config.type() != MetaDataType::Label)
+                THROW("FOLDER_BASED_LABEL_READER can only be used to load labels")
+            auto ret = std::make_shared<VideoLabelReader>();
+            ret->init(config);
+            return ret;
+        }
+            break;
+#endif
         case MetaDataReaderType::TEXT_FILE_META_DATA_READER:
         {
             if(config.type() != MetaDataType::Label)
@@ -78,6 +92,15 @@ std::shared_ptr<MetaDataReader> create_meta_data_reader(const MetaDataConfig& co
             if(config.type() != MetaDataType::BoundingBox)
                 THROW("FOLDER_BASED_LABEL_READER can only be used to load bounding boxes")
             auto ret = std::make_shared<COCOMetaDataReader>();
+            ret->init(config);
+            return ret;
+        }
+            break;
+        case MetaDataReaderType::COCO_KEY_POINTS_META_DATA_READER:
+        {
+            if(config.type() != MetaDataType::KeyPoints)
+                THROW("COCO_KEY_POINTS_META_DATA_READER can only be used to load keypoints")
+            auto ret = std::make_shared<COCOMetaDataReaderKeyPoints>();
             ret->init(config);
             return ret;
         }
@@ -127,6 +150,15 @@ std::shared_ptr<MetaDataReader> create_meta_data_reader(const MetaDataConfig& co
             return ret;
         }
 	    break;
+        case MetaDataReaderType::MXNET_META_DATA_READER:
+        {
+            if(config.type() != MetaDataType::Label)
+                THROW("MXNetMetaDataReader can only be used to load labels")
+            auto ret = std::make_shared<MXNetMetaDataReader>();
+            ret->init(config);
+            return ret;
+        }
+        break;
         default:
             THROW("MetaDataReader type is unsupported : "+ TOSTR(config.reader_type()));
     }

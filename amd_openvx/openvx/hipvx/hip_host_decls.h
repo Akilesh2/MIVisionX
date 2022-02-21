@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -682,7 +682,7 @@ int HipExec_ScaleGaussianHalf_U8_U8_5x5(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
         vx_uint32 srcWidth, vx_uint32 srcHeight,
-        const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes);
+        const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes, vx_uint32 srcImageBufferSize);
 
 // statistical_kernels
 
@@ -751,20 +751,20 @@ int HipExec_WarpAffine_U8_U8_Nearest(
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
         vx_uint32 srcWidth, vx_uint32 srcHeight,
         const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes,
-        ago_affine_matrix_t *affineMatrix);
+        vx_uint32 srcImageBufferSize, ago_affine_matrix_t *affineMatrix);
 int HipExec_WarpAffine_U8_U8_Nearest_Constant(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
         vx_uint32 srcWidth, vx_uint32 srcHeight,
         const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes,
         ago_affine_matrix_t *affineMatrix,
-        vx_uint8 borderValue);
+        vx_uint8 borderValue, vx_rectangle_t rect_valid);
 int HipExec_WarpAffine_U8_U8_Bilinear(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
         vx_uint32 srcWidth, vx_uint32 srcHeight,
         const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes,
-        ago_affine_matrix_t *affineMatrix);
+        vx_uint32 srcImageBufferSize, ago_affine_matrix_t *affineMatrix);
 int HipExec_WarpAffine_U8_U8_Bilinear_Constant(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
@@ -777,7 +777,7 @@ int HipExec_WarpPerspective_U8_U8_Nearest(
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
         vx_uint32 srcWidth, vx_uint32 srcHeight,
         const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes,
-        ago_perspective_matrix_t *perspectiveMatrix);
+        vx_uint32 srcImageBufferSize, ago_perspective_matrix_t *perspectiveMatrix);
 int HipExec_WarpPerspective_U8_U8_Nearest_Constant(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
@@ -790,7 +790,7 @@ int HipExec_WarpPerspective_U8_U8_Bilinear(
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
         vx_uint32 srcWidth, vx_uint32 srcHeight,
         const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes,
-        ago_perspective_matrix_t *perspectiveMatrix);
+        vx_uint32 srcImageBufferSize, ago_perspective_matrix_t *perspectiveMatrix);
 int HipExec_WarpPerspective_U8_U8_Bilinear_Constant(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
@@ -802,20 +802,20 @@ int HipExec_Remap_U8_U8_Nearest(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
         vx_uint32 srcWidth, vx_uint32 srcHeight,
-        const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes,
+        const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes, vx_uint32 srcImageBufferSize,
         ago_coord2d_ushort_t *remap, vx_uint32 remapStrideInBytes);
 int HipExec_Remap_U8_U8_Nearest_Constant(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
         vx_uint32 srcWidth, vx_uint32 srcHeight,
-        const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes,
+        const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes,vx_uint32 srcImageBufferSize,
         ago_coord2d_ushort_t *remap, vx_uint32 remapStrideInBytes, const vx_uint8 borderValue);
 int HipExec_Remap_U8_U8_Bilinear(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
         vx_uint32 srcWidth, vx_uint32 srcHeight,
         const vx_uint8 *pHipSrcImage, vx_uint32 srcImageStrideInBytes,
-        ago_coord2d_ushort_t *remap, vx_uint32 remapStrideInBytes);
+        vx_uint32 srcImageBufferSize, ago_coord2d_ushort_t *remap, vx_uint32 remapStrideInBytes);
 int HipExec_Remap_U8_U8_Bilinear_Constant(
         hipStream_t stream, vx_uint32 dstWidth, vx_uint32 dstHeight,
         vx_uint8 *pHipDstImage, vx_uint32 dstImageStrideInBytes,
@@ -896,8 +896,8 @@ int HipExec_HarrisScore_HVC_HG3_7x7(
         vx_float32 sensitivity, vx_float32 strength_threshold,
         vx_int32 border, vx_float32 normFactor);
 int HipExec_NonMaxSupp_XY_ANY_3x3(
-        hipStream_t stream, vx_uint32 capacityOfList, ago_keypoint_xys_t *pHipDstList,
-        vx_uint32 srcWidth, vx_uint32 srcHeight,
+        hipStream_t stream, vx_uint32 capacityOfList, vx_uint8 *pHipDstList,
+        vx_uint32 dstListOffset, vx_uint32 srcWidth, vx_uint32 srcHeight,
         vx_float32 *pHipSrcImage, vx_uint32 srcImageStrideInBytes);
 
 #endif //MIVISIONX_HIP_HOST_DECLS_H

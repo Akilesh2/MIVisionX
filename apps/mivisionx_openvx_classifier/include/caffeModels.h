@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2018 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2018 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@ THE SOFTWARE.
 #define included_file_annmodule_h
 
 #include <VX/vx.h>
+#include <VX/vx_compatibility.h>
 
 extern "C" VX_API_ENTRY vx_status VX_API_CALL annAddToGraph_inception(vx_graph graph, vx_tensor data, vx_tensor softmax_prob, const char * binaryFilename);
 extern "C" VX_API_ENTRY vx_status VX_API_CALL annAddToGraph_resnet(vx_graph graph, vx_tensor data, vx_tensor softmax_prob, const char * binaryFilename);

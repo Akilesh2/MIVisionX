@@ -1,5 +1,5 @@
 /* 
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1689,7 +1689,7 @@ int agoDramaDivideCannyEdgeDetectorNode(AgoNodeList * nodeList, AgoNode * anode)
 	if (gradient_size == 7) {
 		status |= agoDramaDivideAppend(nodeList, anode, VX_KERNEL_AMD_CANNY_SUPP_THRESHOLD_U8XY_U16_7x7);	
 	}
-	else 
+	else
 		status |= agoDramaDivideAppend(nodeList, anode, VX_KERNEL_AMD_CANNY_SUPP_THRESHOLD_U8XY_U16_3x3);
 #endif
 	// run edge trace

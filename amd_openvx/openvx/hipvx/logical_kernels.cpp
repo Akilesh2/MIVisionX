@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +46,6 @@ Hip_And_U8_U8U8(uint dstWidth, uint dstHeight,
 
     uint2 src1 = *((uint2 *)(&pSrcImage1[src1Idx]));
     uint2 src2 = *((uint2 *)(&pSrcImage2[src2Idx]));
-    uint2 dst;
 
     *((uint2 *)(&pDstImage[dstIdx])) = src1 & src2;
 }

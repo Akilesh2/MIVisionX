@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1249,13 +1249,13 @@ vx_status agoVerifyNode(AgoNode * node)
         }
     }
 
-    // mark the kernels with VX_KERNEL_ATTRIBUTE_AMD_OPENCL_BUFFER_UPDATE_CALLBACK
+    // mark the kernels with VX_KERNEL_ATTRIBUTE_AMD_GPU_BUFFER_UPDATE_CALLBACK
     // with enableUserBufferGPU
     if (kernel->gpu_buffer_update_callback_f) {
-        AgoData * data = node->paramList[kernel->opencl_buffer_update_param_index];
+        AgoData * data = node->paramList[kernel->gpu_buffer_update_param_index];
         if (!data || !data->isVirtual || data->ref.type != VX_TYPE_IMAGE || data->u.img.planes != 1 || data->ownerOfUserBufferGPU || data->u.img.enableUserBufferGPU) {
             status = VX_ERROR_INVALID_PARAMETERS;
-            agoAddLogEntry(&kernel->ref, status, "ERROR: agoVerifyGraph: kernel %s: unexpected/unsupported argument#%d -- needs virtual image with single-plane\n", kernel->name, kernel->opencl_buffer_update_param_index);
+            agoAddLogEntry(&kernel->ref, status, "ERROR: agoVerifyGraph: kernel %s: unexpected/unsupported argument#%d -- needs virtual image with single-plane\n", kernel->name, kernel->gpu_buffer_update_param_index);
             return status;
         }
         // mark that the buffer gets initialized a node
@@ -1373,8 +1373,8 @@ vx_status agoVerifyNode(AgoNode * node)
                         data->u.img.rect_valid.end_y = data->u.img.height;
                     // check for VX_IMAGE_ATTRIBUTE_AMD_ENABLE_USER_BUFFER_GPU attribute
                     if (meta->data.u.img.enableUserBufferGPU) {
-                        // supports only virtual images with single color plane and without ROI
-                        if (!data->isVirtual || data->u.img.planes != 1 || data->u.img.isROI || data->ownerOfUserBufferGPU) {
+                        // supports only virtual images without ROI (planes commented out for accepting NV12 user buffer for amd_media)
+                        if (!data->isVirtual /*|| data->u.img.planes != 1 */|| data->u.img.isROI || data->ownerOfUserBufferGPU) {
                             agoAddLogEntry(&kernel->ref, VX_ERROR_NOT_SUPPORTED, "ERROR: agoVerifyGraph: kernel %s: VX_IMAGE_ATTRIBUTE_AMD_ENABLE_USER_BUFFER_GPU is not supported for argument#%d\n", kernel->name, arg);
                             return VX_ERROR_NOT_SUPPORTED;
                         }
@@ -2241,6 +2241,24 @@ int agoExecuteGraph(AgoGraph * graph)
                 bool launched = true;
                 agoPerfProfileEntry(graph, ago_profile_type_launch_begin, &node->ref);
                 agoPerfCaptureStart(&node->perf);
+                // make sure that all input buffers are synched
+                for (vx_uint32 i = 0; i < node->paramCount; i++) {
+                    AgoData * data = node->paramList[i];
+                    if (data &&
+                        (node->parameters[i].direction == VX_INPUT || node->parameters[i].direction == VX_BIDIRECTIONAL))
+                    {
+                        auto dataToSync = (data->ref.type == VX_TYPE_IMAGE && data->u.img.isROI) ? data->u.img.roiMasterImage : data;
+                        if (dataToSync->buffer_sync_flags & (AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE | AGO_BUFFER_SYNC_FLAG_DIRTY_BY_COMMIT) &&
+                            dataToSync->opencl_buffer && !(dataToSync->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED))
+                        {
+                            status = agoDirective((vx_reference)dataToSync, VX_DIRECTIVE_AMD_COPY_TO_OPENCL);
+                            if(status != VX_SUCCESS) {
+                                agoAddLogEntry((vx_reference)graph, VX_FAILURE, "ERROR: agoDirective(*,VX_DIRECTIVE_AMD_COPY_TO_OPENCL) failed (%d:%s)\n", status, agoEnum2Name(status));
+                                return status;
+                            }
+                        }
+                    }
+                }
                 if (!node->supernode) {
                     // launch the single node
                     if (agoGpuOclSingleNodeLaunch(graph, node) < 0) {
@@ -2274,6 +2292,24 @@ int agoExecuteGraph(AgoGraph * graph)
                 node->hip_stream0 = graph->hip_stream0;
                 agoPerfProfileEntry(graph, ago_profile_type_launch_begin, &node->ref);
                 agoPerfCaptureStart(&node->perf);
+                // make sure that all input buffers are synched
+                for (vx_uint32 i = 0; i < node->paramCount; i++) {
+                    AgoData * data = node->paramList[i];
+                    if (data &&
+                        (node->parameters[i].direction == VX_INPUT || node->parameters[i].direction == VX_BIDIRECTIONAL))
+                    {
+                        auto dataToSync = (data->ref.type == VX_TYPE_IMAGE && data->u.img.isROI) ? data->u.img.roiMasterImage : data;
+                        if (dataToSync->buffer_sync_flags & (AGO_BUFFER_SYNC_FLAG_DIRTY_BY_NODE | AGO_BUFFER_SYNC_FLAG_DIRTY_BY_COMMIT) &&
+                            dataToSync->hip_memory && !(dataToSync->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED))
+                        {
+                            status = agoDirective((vx_reference)dataToSync, VX_DIRECTIVE_AMD_COPY_TO_HIPMEM);
+                            if(status != VX_SUCCESS) {
+                                agoAddLogEntry((vx_reference)graph, VX_FAILURE, "ERROR: agoDirective(*,VX_DIRECTIVE_AMD_COPY_TO_HIPMEM) failed (%d:%s)\n", status, agoEnum2Name(status));
+                                return status;
+                            }
+                        }
+                    }
+                }
                 if (!node->supernode) {
                     // launch the single node
                     if (agoGpuHipSingleNodeLaunch(graph, node) < 0) {
@@ -2550,12 +2586,21 @@ vx_status agoDirective(vx_reference reference, vx_enum directive)
                     auto dataToSync = (data->ref.type == VX_TYPE_IMAGE && data->u.img.isROI) ? data->u.img.roiMasterImage : data;
                     if (dataToSync->ref.type == VX_TYPE_LUT) {
                         if (dataToSync->opencl_buffer) {
-                            size_t origin[3] = { 0, 0, 0 };
-                            size_t region[3] = { 256, 1, 1 };
-                            cl_int err = clEnqueueWriteImage(dataToSync->ref.context->opencl_cmdq, dataToSync->opencl_buffer, CL_TRUE, origin, region, 256, 0, dataToSync->buffer, 0, NULL, NULL);
-                            if (err) {
-                                agoAddLogEntry(NULL, VX_FAILURE, "ERROR: clEnqueueWriteImage(lut) => %d\n", err);
-                                return VX_FAILURE;
+                            if (dataToSync->u.lut.type == VX_TYPE_UINT8) {
+                                size_t origin[3] = { 0, 0, 0 };
+                                size_t region[3] = { 256, 1, 1 };
+                                cl_int err = clEnqueueWriteImage(dataToSync->ref.context->opencl_cmdq, dataToSync->opencl_buffer, CL_TRUE, origin, region, 256, 0, dataToSync->buffer, 0, NULL, NULL);
+                                if (err) {
+                                    agoAddLogEntry(NULL, VX_FAILURE, "ERROR: clEnqueueWriteImage(lut) => %d\n", err);
+                                    return VX_FAILURE;
+                                }
+                            }
+                            else if (dataToSync->u.lut.type == VX_TYPE_INT16) {
+                                cl_int err = clEnqueueWriteBuffer(dataToSync->ref.context->opencl_cmdq, dataToSync->opencl_buffer, CL_TRUE, dataToSync->gpu_buffer_offset, dataToSync->size, dataToSync->buffer, 0, NULL, NULL);
+                                if (err) {
+                                    agoAddLogEntry(NULL, VX_FAILURE, "ERROR: clEnqueueWriteImage(lut) => %d\n", err);
+                                    return VX_FAILURE;
+                                }
                             }
                             dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
                             status = VX_SUCCESS;
@@ -2638,6 +2683,16 @@ vx_status agoDirective(vx_reference reference, vx_enum directive)
                                     status = VX_SUCCESS;
                                 }
                             }
+                        }
+                    } else if (dataToSync->ref.type == VX_TYPE_CONVOLUTION) {
+                        if (dataToSync->hip_memory && data->size >0) {
+                            hipError_t err = hipMemcpyHtoD(dataToSync->hip_memory + dataToSync->gpu_buffer_offset, dataToSync->reserved, data->size << 1);
+                            if (err) {
+                                agoAddLogEntry(NULL, VX_FAILURE, "ERROR: hipMemcpyHtoD failed => %d\n", err);
+                                return VX_FAILURE;
+                            }
+                            dataToSync->buffer_sync_flags |= AGO_BUFFER_SYNC_FLAG_DIRTY_SYNCHED;
+                            status = VX_SUCCESS;
                         }
                     } else {
                         if (dataToSync->hip_memory) {

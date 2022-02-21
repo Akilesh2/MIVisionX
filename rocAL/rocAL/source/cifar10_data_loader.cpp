@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,13 +20,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include <thread> 
+#include <thread>
 #include <chrono>
 #include "cifar10_data_loader.h"
 #include "vx_ext_amd.h"
 
+#if ENABLE_HIP
+CIFAR10DataLoader::CIFAR10DataLoader(DeviceResourcesHip dev_resources):
+#else
 CIFAR10DataLoader::CIFAR10DataLoader(DeviceResources dev_resources):
-_circ_buff(dev_resources, CIRC_BUFFER_DEPTH),
+#endif
+_circ_buff(dev_resources),
 _file_load_time("file load time", DBG_TIMING),
 _swap_handle_time("Swap_handle_time", DBG_TIMING)
 {
@@ -43,13 +47,21 @@ CIFAR10DataLoader::~CIFAR10DataLoader()
     de_init();
 }
 
+void CIFAR10DataLoader::set_prefetch_queue_depth(size_t prefetch_queue_depth)
+{
+    if(prefetch_queue_depth <= 0)
+        THROW("Prefetch quque depth value cannot be zero or negative");
+    _prefetch_queue_depth = prefetch_queue_depth;
+}
+
+
 size_t
 CIFAR10DataLoader::remaining_count()
 {
     return _remaining_image_count;
 }
 
-void 
+void
 CIFAR10DataLoader::reset()
 {
     // stop the writer thread and empty the internal circular buffer
@@ -70,7 +82,7 @@ CIFAR10DataLoader::reset()
     start_loading();
 }
 
-void 
+void
 CIFAR10DataLoader::de_init()
 {
     stop_internal_thread();
@@ -135,7 +147,7 @@ CIFAR10DataLoader::initialize(ReaderConfig reader_cfg, DecoderConfig decoder_cfg
     _raw_img_info._roi_height.resize(batch_size);
     _raw_img_info._original_height.resize(_batch_size);
     _raw_img_info._original_width.resize(_batch_size);
-    _circ_buff.init(_mem_type, _output_mem_size);
+    _circ_buff.init(_mem_type, _output_mem_size, _prefetch_queue_depth);
     _is_initialized = true;
     LOG("Loader module initialized");
 }
@@ -146,18 +158,24 @@ void CIFAR10DataLoader::set_random_bbox_data_reader(std::shared_ptr<RandomBBoxCr
 }
 
 void
+CIFAR10DataLoader::shut_down()
+{
+    _circ_buff.release();
+}
+
+void
 CIFAR10DataLoader::start_loading()
 {
     if(!_is_initialized)
         THROW("start_loading() should be called after initialize() function is called")
 
-    _remaining_image_count = _reader->count();
+    _remaining_image_count = _reader->count_items();
     _internal_thread_running = true;
     _load_thread = std::thread(&CIFAR10DataLoader::load_routine, this);
 }
 
 
-LoaderModuleStatus 
+LoaderModuleStatus
 CIFAR10DataLoader::load_routine()
 {
     LOG("Started the internal loader thread");
@@ -177,7 +195,7 @@ CIFAR10DataLoader::load_routine()
             unsigned file_counter = 0;
             _file_load_time.start();// Debug timing
 
-            while ((file_counter != _batch_size) && _reader->count() > 0)
+            while ((file_counter != _batch_size) && _reader->count_items() > 0)
             {
                 auto read_ptr = data + _image_size * file_counter;
                 size_t readSize = _reader->open();
@@ -185,7 +203,7 @@ CIFAR10DataLoader::load_routine()
                     WRN("Opened file " + _reader->id() + " of size 0");
                     continue;
                 }
-                _actual_read_size[file_counter] = _reader->read(read_ptr, readSize);
+                _actual_read_size[file_counter] = _reader->read_data(read_ptr, readSize);
                 _raw_img_info._image_names[file_counter] = _reader->id();
                 _raw_img_info._roi_width[file_counter] = _output_image->info().width();
                 _raw_img_info._roi_height[file_counter] = _output_image->info().height_single();
@@ -214,8 +232,8 @@ CIFAR10DataLoader::load_routine()
                 last_load_status = load_status;
             }
 
-            // Here it sets the out-of-data flag and signal the circular buffer's internal 
-            // read semaphore using release() call 
+            // Here it sets the out-of-data flag and signal the circular buffer's internal
+            // read semaphore using release() call
             // , and calls the release() allows the reader thread to wake up and handle
             // the out-of-data case properly
             // It also slows down the reader thread since there is no more data to read,
@@ -227,12 +245,12 @@ CIFAR10DataLoader::load_routine()
     return LoaderModuleStatus::OK;
 }
 
-bool 
+bool
 CIFAR10DataLoader::is_out_of_data()
 {
     return (remaining_count() < _batch_size) ;
 }
-LoaderModuleStatus 
+LoaderModuleStatus
 CIFAR10DataLoader::update_output_image()
 {
     LoaderModuleStatus status = LoaderModuleStatus::OK;
@@ -250,8 +268,8 @@ CIFAR10DataLoader::update_output_image()
         if(_output_image->swap_handle(data_buffer)!= 0)
             return LoaderModuleStatus ::DEVICE_BUFFER_SWAP_FAILED;
         _swap_handle_time.end();
-    } 
-    else 
+    }
+    else
     {
         auto data_buffer = _circ_buff.get_read_buffer_host();
         _swap_handle_time.start();
@@ -291,3 +309,8 @@ decoded_image_info CIFAR10DataLoader::get_decode_image_info()
     return _output_decoded_img_info;
 }
 
+
+crop_image_info CIFAR10DataLoader::get_crop_image_info()
+{
+    return _circ_buff.get_cropped_image_info();
+}

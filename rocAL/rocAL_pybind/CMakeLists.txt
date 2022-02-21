@@ -1,4 +1,4 @@
-# Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -36,37 +36,61 @@ endif()
 
 if(NOT OpenCL_FOUND)
     set(BUILD_RALI_PYBIND false)
-    message("-- ${Yellow}rocAL pybind requires OpenCL, Not Found${ColourReset}")
+    message("-- ${Yellow}NOTE: rocAL pybind requires OpenCL, Not Found${ColourReset}")
 endif()
 if(NOT AMDRPP_FOUND)
     set(BUILD_RALI_PYBIND false)
-    message("-- ${Yellow}rocAL pybind requires AMDRPP, Not Found${ColourReset}")
+    message("-- ${Yellow}NOTE: rocAL pybind requires AMDRPP, Not Found${ColourReset}")
+else()
+    #find the RPP backend type
+    set(RPP_BACKEND_OPENCL_FOUND 0)
+    set(RPP_BACKEND_HIP_FOUND 0)
+    if(EXISTS ${ROCM_PATH}/rpp/include/rpp_backend.h)
+        file(READ ${ROCM_PATH}/rpp/include/rpp_backend.h RPP_BACKEND_FILE)
+        string(REGEX MATCH "RPP_BACKEND_OPENCL ([0-9]*)" _ ${RPP_BACKEND_FILE})
+        set(RPP_BACKEND_OPENCL_FOUND ${CMAKE_MATCH_1})
+        string(REGEX MATCH "RPP_BACKEND_HIP ([0-9]*)" _ ${RPP_BACKEND_FILE})
+        set(RPP_BACKEND_HIP_FOUND ${CMAKE_MATCH_1})
+    else()
+        message("-- ${Red}WARNING: ${ROCM_PATH}/rpp/include/rpp_backend.h file Not Found. please run the setup script to install latest RPP package ${ColourReset}")
+    endif()
+    if ("${BACKEND}" STREQUAL "OPENCL" AND OpenCL_FOUND)
+        if (NOT RPP_BACKEND_OPENCL_FOUND)
+            set(BUILD_RALI_PYBIND false)
+            message("-- ${Red}WARNING: RPP with OpenCL backend Not Found (HINT: run setup script with the OCL backend first!) -- rocAL pybind module excluded${ColourReset}")
+        endif()
+    elseif("${BACKEND}" STREQUAL "HIP" AND HIP_FOUND)
+        if (NOT RPP_BACKEND_HIP_FOUND)
+            set(BUILD_RALI_PYBIND false)
+            message("-- ${Red}WARNING: RPP with the HIP backend Not Found (HINT: run setup script with the HIP backend first!) -- rocAL pybind module excluded${ColourReset}")
+        endif()
+    else()
+        set(BUILD_RALI_PYBIND false)
+        message("-- ${Red}WARNING: GPU support with OpenCL or HIP Not Found -- rocAL Pybind module excluded${ColourReset}")
+    endif()
 endif()
+
 if(NOT TurboJpeg_FOUND)
     set(BUILD_RALI_PYBIND false)
-    message("-- ${Yellow}rocAL pybind requires TurboJpeg, Not Found${ColourReset}")
+    message("-- ${Yellow}NOTE: rocAL pybind requires TurboJpeg, Not Found${ColourReset}")
 endif()
 if(CMAKE_VERSION VERSION_LESS ${MIN_CMAKE_VER_REQUIRED})
     set(BUILD_RALI_PYBIND false)
-    message("-- ${Yellow}rocAL pybind required CMake Version Not Found${ColourReset}")
+    message("-- ${Yellow}NOTE: rocAL pybind required CMake Version Not Found${ColourReset}")
 endif()
 if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS ${MIN_CXX_VER_REQUIRED})
     set(BUILD_RALI_PYBIND false)
-    message("-- ${Yellow}rocAL pybind required C++ Version Not Found${ColourReset}")
+    message("-- ${Yellow}NOTE: rocAL pybind required C++ Version Not Found${ColourReset}")
 endif()
 
 if(${BUILD_RALI_PYBIND})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
-    link_directories(${ROCM_PATH}/mivisionx/lib/
-                 ${ROCM_PATH}/rpp/lib
-                )
+    link_directories(${ROCM_PATH}/rpp/lib ${ROCM_PATH}/mivisionx/lib)
 
     include_directories(../rocAL/include/
-                    third_party_lib/
-                    ../../amd_openvx/openvx/include/
-                    ${ROCM_PATH}/mivisionx/include/
-                   )
+                        third_party_lib/
+                        ../../amd_openvx/openvx/include/)
 
     add_subdirectory(third_party_lib/pybind11)
 

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,15 +23,19 @@ THE SOFTWARE.
 #include "node_image_loader.h"
 #include "exception.h"
 
-
+#if ENABLE_HIP
+ImageLoaderNode::ImageLoaderNode(Image *output, DeviceResourcesHip device_resources):
+#else
 ImageLoaderNode::ImageLoaderNode(Image *output, DeviceResources device_resources):
+#endif
         Node({}, {output})
 {
     _loader_module = std::make_shared<ImageLoaderSharded>(device_resources);
 }
 
-void ImageLoaderNode::init(unsigned internal_shard_count, const std::string &source_path, const std::string &json_path, const std::map<std::string, std::string> feature_key_map, StorageType storage_type,
-                           DecoderType decoder_type, bool shuffle, bool loop, size_t load_batch_count, RaliMemType mem_type, bool decoder_keep_orig, const char* file_prefix)
+
+void ImageLoaderNode::init(unsigned internal_shard_count, const std::string &source_path, const std::string &json_path, const std::map<std::string, std::string> feature_key_map, StorageType storage_type, DecoderType decoder_type, bool shuffle, bool loop, 
+                           size_t load_batch_count, RaliMemType mem_type, std::shared_ptr<MetaDataReader> meta_data_reader, bool decoder_keep_orig, const char* file_prefix, unsigned sequence_length, unsigned step, unsigned stride)
 {
     if(!_loader_module)
         THROW("ERROR: loader module is not set for ImageLoaderNode, cannot initialize")
@@ -43,9 +47,14 @@ void ImageLoaderNode::init(unsigned internal_shard_count, const std::string &sou
     reader_cfg.set_shard_count(internal_shard_count);
     reader_cfg.set_batch_count(load_batch_count);
     reader_cfg.set_file_prefix(file_prefix);
+    reader_cfg.set_meta_data_reader(meta_data_reader);
+    //  sequence_length, step and stride parameters used only for SequenceReader
+    reader_cfg.set_sequence_length(sequence_length);
+    reader_cfg.set_frame_step(step);
+    reader_cfg.set_frame_stride(stride);
     _loader_module->initialize(reader_cfg, DecoderConfig(decoder_type),
-             mem_type,
-             _batch_size, decoder_keep_orig);
+                              mem_type,
+                              _batch_size, decoder_keep_orig);
     _loader_module->start_loading();
 }
 

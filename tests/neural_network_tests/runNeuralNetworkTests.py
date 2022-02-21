@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,11 @@ import sys
 import platform
 
 __author__ = "Kiriti Nagesh Gowda"
-__copyright__ = "Copyright 2018 - 2021, AMD MIVisionX - Neural Net Test Full Report"
+__copyright__ = "Copyright 2018 - 2022, AMD MIVisionX - Neural Net Test Full Report"
 __license__ = "MIT"
 __version__ = "1.1.1"
 __maintainer__ = "Kiriti Nagesh Gowda"
-__email__ = "Kiriti.NageshGowda@amd.com"
+__email__ = "mivisionx.support@amd.com"
 __status__ = "Shipping"
 
 if sys.version_info[0] < 3:
@@ -128,12 +128,18 @@ parser.add_argument('--miopen_find',        type=int, default=1,
                     help='MIOPEN_FIND_ENFORCE mode - optional (default:1 [range:1 - 5])')
 parser.add_argument('--test_info',          type=str, default='no',
                     help='Show test info - optional (default:no [options:no/yes])')
+parser.add_argument('--backend_type',       type=str, default='OCL',
+                    help='Backend type - optional (default:HOST [options:HOST/HIP/OCL])')
+parser.add_argument('--install_directory',    type=str, default='/opt/rocm/mivisionx',
+                    help='MIVisionX Install Directory - optional')
 args = parser.parse_args()
 
 profileMode = args.profiler_mode
 profileLevel = args.profiler_level
 miopenFind = args.miopen_find
 testInfo = args.test_info
+backendType = args.backend_type
+installDir = args.install_directory
 
 platfromInfo = platform.platform()
 
@@ -159,12 +165,29 @@ if testInfo == 'yes':
     script_info()
     exit()
 
+# check backend
+if backendType not in ('HOST', 'HIP', 'OCL'):
+    print("ERROR: Backends supported - HOST or HIP or OCL]")
+    exit()
+
+if backendType == 'HOST':
+    print("ERROR: HOST Backend currently NOT Supported [Supported: OCL/HIP]")
+    exit()
+
+# check install
+runVX_exe = installDir+'/bin/runvx'
+if(os.path.isfile(runVX_exe)):
+    print("STATUS: MIVisionX Install Path Found - "+installDir)
+else:
+    print("\nERROR: MIVisionX Install Path Not Found\n")
+    exit()
+
 print("\nMIVisionX runNeuralNetworkTests V-"+__version__+"\n")
 
 # check for Scripts
 scriptPath = os.path.dirname(os.path.realpath(__file__))
 modelCompilerDir = os.path.expanduser(
-    '/opt/rocm/mivisionx/model_compiler/python')
+    installDir+'/model_compiler/python')
 pythonScript = modelCompilerDir+'/caffe_to_nnir.py'
 modelCompilerScript = os.path.abspath(pythonScript)
 if(os.path.isfile(modelCompilerScript)):
@@ -702,8 +725,8 @@ platform_name_fq = shell('hostname --all-fqdns')
 platform_ip = shell('hostname -I')[0:-1]  # extra trailing space
 
 file_dtstr = datetime.now().strftime("%Y%m%d")
-reportFilename = 'inference_report_%s_%s.md' % (
-    platform_name, file_dtstr)
+reportFilename = 'inference_report_%s_%s_%s.md' % (
+    backendType, platform_name, file_dtstr)
 report_dtstr = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z")
 sys_info = shell('inxi -c0 -S')
 
@@ -716,7 +739,7 @@ gpu_info = gpu_info.rstrip()  # strip out X info
 memory_info = shell('inxi -c 0 -m')
 board_info = shell('inxi -c0 -M')
 
-lib_tree = shell('ldd -v /opt/rocm/mivisionx/lib/libvx_nn.so')
+lib_tree = shell('ldd -v '+installDir+'/lib/libvx_nn.so')
 lib_tree = strip_libtree_addresses(lib_tree)
 
 vbios = shell('(cd /opt/rocm/bin/; ./rocm-smi -v)')

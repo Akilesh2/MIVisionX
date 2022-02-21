@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include "commons.h"
 #include "meta_data.h"
 #include "meta_data_reader.h"
+#include "reader.h"
 #include <lmdb.h>
 #include "caffe_protos.pb.h"
 
@@ -37,6 +38,7 @@ public :
     void read_all(const std::string& path) override;
     void release(std::string image_name);
     void release() override;
+    bool set_timestamp_mode() override { return false; }
     void print_map_contents();
     MetaDataBatch * get_output() override { return _output; }
     CaffeMetaDataReader();

@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc.
+# Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ cmake_minimum_required(VERSION 3.0)
 project(mv_compile)
 set(CMAKE_CXX_STANDARD 11)
 
-include_directories(/opt/rocm/mivisionx/include 
+include_directories(${CMAKE_INSTALL_PREFIX}/include
                     ${PROJECT_SOURCE_DIR}
                    )
 

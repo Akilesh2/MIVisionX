@@ -1,5 +1,5 @@
 /* 
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -82,6 +82,24 @@ bool agoGetEnvironmentVariable(const char * name, char * value, size_t valueSize
 		value[valueSize-1] = 0;
 	}
 	return v ? true : false;
+#endif
+}
+
+bool agoSetEnvironmentVariable(const char * name, const char * value)
+{
+#if _WIN32
+    return SetEnvironmentVariableA(name, value);
+#else
+    return !(setenv(name, value, 1));
+#endif
+}
+
+bool agoUnsetEnvironmentVariable(const char * name)
+{
+#if _WIN32
+    return SetEnvironmentVariableA(name, NULL);
+#else
+    return !(unsetenv(name));
 #endif
 }
 

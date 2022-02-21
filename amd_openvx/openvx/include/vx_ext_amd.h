@@ -1,16 +1,16 @@
-/* 
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
- 
+/*
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
- 
+
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
- 
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
@@ -47,7 +47,7 @@ THE SOFTWARE.
 #define AGO_TARGET_AFFINITY_GPU_INFO_SVM_AS_CLMEM      0x20
 #define AGO_TARGET_AFFINITY_GPU_INFO_SVM_NO_FGS        0x40
 
-/*! \brief Maximum size of scalar string buffer. The local buffers used for accessing scalar strings 
+/*! \brief Maximum size of scalar string buffer. The local buffers used for accessing scalar strings
 * should be of size VX_MAX_STRING_BUFFER_SIZE_AMD and the maximum allowed string length is
 * VX_MAX_STRING_BUFFER_SIZE_AMD-1.
 * \ingroup group_scalar
@@ -123,9 +123,9 @@ enum vx_kernel_attribute_amd_e {
     /*! \brief kernel callback for OpenCL global work[]. Use a <tt>\ref amd_kernel_opencl_global_work_update_callback_f</tt> parameter.*/
     VX_KERNEL_ATTRIBUTE_AMD_OPENCL_GLOBAL_WORK_UPDATE_CALLBACK = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_KERNEL) + 0x04,
     /*! \brief kernel flag to enable OpenCL buffer access (default OFF). Use a <tt>\ref vx_bool</tt> parameter.*/
-    VX_KERNEL_ATTRIBUTE_AMD_OPENCL_BUFFER_ACCESS_ENABLE        = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_KERNEL) + 0x05,
-    /*! \brief kernel callback for OpenCL buffer update. Use a <tt>\ref AgoKernelOpenclBufferUpdateInfo</tt> parameter.*/
-    VX_KERNEL_ATTRIBUTE_AMD_OPENCL_BUFFER_UPDATE_CALLBACK      = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_KERNEL) + 0x06,
+    VX_KERNEL_ATTRIBUTE_AMD_GPU_BUFFER_ACCESS_ENABLE        = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_KERNEL) + 0x05,
+    /*! \brief kernel callback for GPU buffer update. Use a <tt>\ref AgoKernelGpuBufferUpdateInfo</tt> parameter.*/
+    VX_KERNEL_ATTRIBUTE_AMD_GPU_BUFFER_UPDATE_CALLBACK      = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_KERNEL) + 0x06,
 };
 
 /*! \brief The AMD graph attributes list.
@@ -156,6 +156,7 @@ enum vx_node_attribute_amd_e {
     VX_NODE_ATTRIBUTE_AMD_AFFINITY                      = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_NODE) + 0x01,
     /*! \brief OpenCL command queue. Use a <tt>\ref cl_command_queue</tt> parameter.*/
     VX_NODE_ATTRIBUTE_AMD_OPENCL_COMMAND_QUEUE          = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_NODE) + 0x02,
+    VX_NODE_ATTRIBUTE_AMD_HIP_STREAM           = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_NODE) + 0x03
 };
 
 /*! \brief The AMD image attributes list.
@@ -181,10 +182,10 @@ enum vx_image_attribute_amd_e {
 * \ingroup group_tensor
 */
 enum vx_tensor_attribute_amd_e {
-    /*! \brief OpenCL buffer strides (array of <tt>vx_size</tt>). */
-    VX_TENSOR_STRIDE_OPENCL   = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_TENSOR) + 0x5,
-    /*! \brief OpenCL buffer offset. <tt>vx_size</tt>. */
-    VX_TENSOR_OFFSET_OPENCL   = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_TENSOR) + 0x6,
+    /*! \brief GPU buffer strides (array of <tt>vx_size</tt>). */
+    VX_TENSOR_STRIDE_GPU   = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_TENSOR) + 0x5,
+    /*! \brief GPU buffer offset. <tt>vx_size</tt>. */
+    VX_TENSOR_OFFSET_GPU   = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_TENSOR) + 0x6,
     /*! \brief OpenCL buffer. <tt>cl_mem</tt>. */
     VX_TENSOR_BUFFER_OPENCL   = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_TENSOR) + 0x7,
     /*! \brief HIP buffer. <tt>cl_mem</tt>. */
@@ -200,7 +201,8 @@ enum vx_array_attribute_amd_e {
     /*! \brief OpenCL buffer. <tt>cl_mem</tt>. */
     VX_ARRAY_BUFFER_OPENCL   = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_ARRAY) + 0x9,
     VX_ARRAY_BUFFER_HIP   = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_ARRAY) + 0x10,
-        VX_ARRAY_BUFFER    = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_ARRAY ) + 0x11
+    VX_ARRAY_BUFFER    = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_ARRAY ) + 0x11,
+    VX_ARRAY_OFFSET_GPU = VX_ATTRIBUTE_BASE(VX_ID_AMD, VX_TYPE_ARRAY ) + 0x12
 };
 
 /*! \brief These enumerations are given to the \c vxDirective API to enable/disable
@@ -385,22 +387,22 @@ typedef vx_status(VX_CALLBACK * amd_kernel_opencl_global_work_update_callback_f)
     const vx_size opencl_local_work[]              // [input] local_work[] for clEnqueueNDRangeKernel()
     );
 
-/*! \brief AMD usernode callback for setting the OpenCL buffers. The framework will pass
-*   OpenVX objects as parameters to OpenCL kernels in othe order they appear to OpenVX node.
+/*! \brief AMD usernode callback for setting the GPU buffers. The framework will pass
+*   OpenVX objects as parameters to GPU kernels in othe order they appear to OpenVX node.
 *   This function will get called before executing the node.
 */
-typedef vx_status(VX_CALLBACK * amd_kernel_opencl_buffer_update_callback_f) (
+typedef vx_status(VX_CALLBACK * amd_kernel_gpu_buffer_update_callback_f) (
     vx_node node,                                  // [input] node
     const vx_reference parameters[],               // [input] parameters
     vx_uint32 num                                  // [input] number of parameters
     );
 
-/*! \brief AMD data structure for use by VX_KERNEL_ATTRIBUTE_AMD_OPENCL_BUFFER_UPDATE_CALLBACK.
+/*! \brief AMD data structure for use by VX_KERNEL_ATTRIBUTE_AMD_GPU_BUFFER_UPDATE_CALLBACK.
 */
 typedef struct {
-    amd_kernel_opencl_buffer_update_callback_f gpu_buffer_update_callback_f;
-    vx_uint32 opencl_buffer_update_param_index;
-} AgoKernelOpenclBufferUpdateInfo;
+    amd_kernel_gpu_buffer_update_callback_f gpu_buffer_update_callback_f;
+    vx_uint32 gpu_buffer_update_param_index;
+} AgoKernelGpuBufferUpdateInfo;
 #endif
 
 #ifdef  __cplusplus

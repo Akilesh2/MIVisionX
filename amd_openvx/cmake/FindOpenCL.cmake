@@ -2,7 +2,7 @@
 # 
 # MIT License
 # 
-# Copyright (c) 2017 - 2020 Advanced Micro Devices, Inc.
+# Copyright (c) 2017 - 2022 Advanced Micro Devices, Inc.
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -31,13 +31,13 @@ find_package_handle_standard_args(
     REQUIRED_VARS
         OpenCL_LIBRARIES
         OpenCL_INCLUDE_DIRS
-        CL_TARGET_OPENCL_VERSION
+        CL_TARGET_OpenCL_VERSION
     VERSION_VAR OpenCL_VERSION
 )
 
 if(OpenCL_LIBRARIES AND OpenCL_INCLUDE_DIRS)
     set(OpenCL_FOUND TRUE)
-    add_definitions(-DCL_TARGET_OPENCL_VERSION=${CL_TARGET_OPENCL_VERSION})
+    add_definitions(-DCL_TARGET_OPENCL_VERSION=${CL_TARGET_OpenCL_VERSION})
 else()
     find_path(OPENCL_INCLUDE_DIRS
         NAMES OpenCL/cl.h CL/cl.h
@@ -98,28 +98,31 @@ else()
 
     if(EXISTS "${ROCM_PATH}/opencl/lib/libOpenCL.so")
         if(NOT "${OPENCL_LIBRARIES}" STREQUAL "${ROCM_PATH}/opencl/lib/libOpenCL.so")
-            message("-- ${Magenta}ROCm OpenCL Found - Force OpenCL_LIBRARIES & OpenCL_INCLUDE_DIRS to use ROCm OpenCL${ColourReset}")
+            message("-- ${White}OpenCL Found - ${OPENCL_LIBRARIES}${ColourReset}")
+            message("-- ${White}ROCm OpenCL Found - Force OpenCL_LIBRARIES & OpenCL_INCLUDE_DIRS to use ROCm OpenCL${ColourReset}")
             set(OpenCL_LIBRARIES ${ROCM_PATH}/opencl/lib/libOpenCL.so CACHE INTERNAL "")
             set(OpenCL_INCLUDE_DIRS ${ROCM_PATH}/opencl/include CACHE INTERNAL "")
         endif()
+    else()
+        message("-- ${White}ROCm OpenCL Not Found${ColourReset}")
     endif()
 
     if(OpenCL_FOUND)
         execute_process(
-            COMMAND bash -c "nm -gDC ${OPENCL_LIBRARIES} | grep OPENCL_2.2"
+            COMMAND bash -c "nm -gDC ${OpenCL_LIBRARIES} | grep OPENCL_2.2"
             OUTPUT_VARIABLE outVar
         )
         if(NOT ${outVar} STREQUAL "")
-            set(CL_TARGET_OPENCL_VERSION 220 CACHE INTERNAL "")
+            set(CL_TARGET_OpenCL_VERSION 220 CACHE INTERNAL "")
         else()
-            message( "-- ${Yellow}FindOpenCL failed to find: OpenCL 2.2${ColourReset}" )
-            set(CL_TARGET_OPENCL_VERSION 120 CACHE INTERNAL "")
+            message( "-- ${Yellow}NOTE: FindOpenCL failed to find -- OpenCL 2.2${ColourReset}" )
+            set(CL_TARGET_OpenCL_VERSION 120 CACHE INTERNAL "")
         endif()
-        add_definitions(-DCL_TARGET_OPENCL_VERSION=${CL_TARGET_OPENCL_VERSION})
-        message("-- ${Magenta}ROCm OpenCL Found - Setting CL_TARGET_OPENCL_VERSION=${CL_TARGET_OPENCL_VERSION}${ColourReset}")
+        add_definitions(-DCL_TARGET_OPENCL_VERSION=${CL_TARGET_OpenCL_VERSION})
+        message("-- ${White}OpenCL - Setting CL_TARGET_OPENCL_VERSION=${CL_TARGET_OpenCL_VERSION}${ColourReset}")
     endif()
 
     if( NOT OpenCL_FOUND )
-        message( "-- ${Yellow}FindOpenCL failed to find: OpenCL${ColourReset}" )
+        message( "-- ${Yellow}NOTE: FindOpenCL failed to find -- OpenCL${ColourReset}" )
     endif()
 endif()

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -57,6 +57,8 @@ using namespace std;
 struct RPPCommonHandle {
 #if ENABLE_OPENCL
     cl_command_queue cmdq;
+#elif ENABLE_HIP
+    hipStream_t hipstream;
 #endif
     void* cpuHandle = NULL;
     int count;

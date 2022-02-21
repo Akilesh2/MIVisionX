@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,7 @@ enum class LoaderModuleStatus
 };
 
 /*! \class LoaderModule The interface defining the API and requirements of loader modules*/
-class LoaderModule 
+class LoaderModule
 {
 public:
     virtual void initialize(ReaderConfig reader_config, DecoderConfig decoder_config, RaliMemType mem_type, unsigned batch_size, bool keep_orig_size) = 0;
@@ -55,8 +55,11 @@ public:
     virtual std::vector<std::string> get_id() = 0; // returns the id of the last batch of images/frames loaded
     virtual void start_loading() = 0; // starts internal loading thread
     virtual decoded_image_info get_decode_image_info() = 0;
+    virtual crop_image_info get_crop_image_info() = 0;
+    virtual void set_prefetch_queue_depth(size_t prefetch_queue_depth) = 0;
     // introduce meta data reader
     virtual void set_random_bbox_data_reader(std::shared_ptr<RandomBBoxCrop_MetaDataReader> randombboxcrop_meta_data_reader) = 0;
+    virtual void shut_down() = 0;
 };
 
 using pLoaderModule = std::shared_ptr<LoaderModule>;

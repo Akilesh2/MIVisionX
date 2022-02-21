@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,12 @@ THE SOFTWARE.
 
 struct Context
 {
-    explicit Context(size_t batch_size, RaliAffinity affinity, int gpu_id , size_t cpu_thread_count ):
+    explicit Context(size_t batch_size, RaliAffinity affinity, int gpu_id , size_t cpu_thread_count, size_t prefetch_queue_depth,  RaliTensorDataType output_tensor_type ):
     affinity(affinity),
     _user_batch_size(batch_size)
     {
         LOG("Processing on " + STR(((affinity == RaliAffinity::CPU)?" CPU": " GPU")))
-        master_graph = std::make_shared<MasterGraph>(batch_size, affinity, gpu_id, cpu_thread_count);
+        master_graph = std::make_shared<MasterGraph>(batch_size, affinity, gpu_id, cpu_thread_count, prefetch_queue_depth, output_tensor_type);
         _internal_batch_size = master_graph->internal_batch_size();
     }
     ~Context()

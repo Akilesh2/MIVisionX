@@ -1,5 +1,5 @@
 /* 
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -49,7 +49,6 @@ THE SOFTWARE.
 #include <functional>
 #include <chrono>
 #include <thread>
-using namespace std;
 
 #if _WIN32
 #include <Windows.h>
@@ -68,6 +67,7 @@ using namespace std;
 #define _strnicmp strncasecmp
 #define _stricmp  strcasecmp
 #endif
+using namespace std;
 
 #if ENABLE_OPENCL
 #if __APPLE__
@@ -78,8 +78,10 @@ using namespace std;
 #endif
 
 #if ENABLE_HIP
+#ifndef __HIP_PLATFORM_AMD__
+#define __HIP_PLATFORM_AMD__
+#endif
 #define HIPRTC_GET_TYPE_NAME
-#define __HIP_PLATFORM_HCC__
 #include "hip/hip_runtime_api.h"
 #include "hip/hip_runtime.h"
 #include "hip/hiprtc.h"
@@ -133,6 +135,8 @@ void       agoControlFpReset(uint32_t state);
 int64_t    agoGetClockCounter();
 int64_t    agoGetClockFrequency();
 bool       agoGetEnvironmentVariable(const char * name, char * value, size_t valueSize); // returns true if success
+bool       agoSetEnvironmentVariable(const char * name, const char * value); // returns true if success
+bool       agoUnsetEnvironmentVariable(const char * name); // returns true if success
 ago_module agoOpenModule(const char * libFileName);
 void *     agoGetFunctionAddress(ago_module module, const char * functionName);
 void       agoCloseModule(ago_module module);

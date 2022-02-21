@@ -1,5 +1,5 @@
 /* 
-Copyright (c) 2015 - 2020 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,8 +34,7 @@ static void clDumpBuffer(const char * fileNameFormat, cl_command_queue opencl_cm
     static int dumpBufferCount = 0; dumpBufferCount++;
     char fileName[1024]; sprintf(fileName, fileNameFormat, dumpBufferCount);
     cl_mem opencl_buffer = data->opencl_buffer;
-    cl_uint gpu_buffer_offset = data->gpu_buffer_offset
-    _buffer_offset;
+    cl_uint gpu_buffer_offset = data->gpu_buffer_offset;
     cl_uint size = (cl_uint)0;
     if (data->ref.type == VX_TYPE_IMAGE)
         size = (cl_uint)(data->u.img.stride_in_bytes*data->u.img.height);
@@ -382,6 +381,14 @@ int agoGpuOclAllocBuffer(AgoData * data)
                 agoAddLogEntry(&context->ref, VX_FAILURE, "ERROR: agoGpuOclCreateBuffer(%p,CL_MEM_READ_WRITE,%d,0,*) => %d\n", context->opencl_context, (int)dataMaster->size + dataMaster->gpu_buffer_offset, err);
                 return -1;
             }
+            else {
+                vx_uint32 zero = 0;
+                err = clEnqueueFillBuffer(context->opencl_cmdq, dataMaster->opencl_buffer, &zero, sizeof(zero), 0, dataMaster->gpu_buffer_offset + dataMaster->size, 0, NULL, NULL);
+                if (err) {
+                    agoAddLogEntry(&context->ref, VX_FAILURE, "ERROR: clEnqueueFillBuffer() => %d\n", err);
+                    return -1;
+                }
+            }
             if (dataMaster->u.img.isUniform) {
                 // make sure that CPU buffer is allocated
                 if (!dataMaster->buffer) {
@@ -401,6 +408,14 @@ int agoGpuOclAllocBuffer(AgoData * data)
         if (data != dataMaster) {
             // special handling for image ROI
             data->opencl_buffer = dataMaster->opencl_buffer;
+            if((dataMaster->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_BY_WRITE)) {
+                // copy the image into OpenCL buffer because commits aren't done to this buffer
+                cl_int err = clEnqueueWriteBuffer(context->opencl_cmdq, dataMaster->opencl_buffer, CL_TRUE, dataMaster->gpu_buffer_offset, dataMaster->size, dataMaster->buffer, 0, NULL, NULL);
+                if (err) { 
+                    agoAddLogEntry(&context->ref, VX_FAILURE, "ERROR: agoGpuOclAllocBuffer: clEnqueueWriteBuffer() => %d\n", err);
+                    return -1; 
+                }
+            }
 #if defined(CL_VERSION_2_0)
             data->opencl_svm_buffer = dataMaster->opencl_svm_buffer;
 #endif
@@ -2431,13 +2446,13 @@ int agoGpuOclSingleNodeWait(AgoGraph * graph, AgoNode * node)
 #endif
         }
     }
-    if (node->opencl_scalar_array_output_sync.enable && 
-        node->paramList[node->opencl_scalar_array_output_sync.paramIndexScalar] && 
-        node->paramList[node->opencl_scalar_array_output_sync.paramIndexArray])
+    if (node->gpu_scalar_array_output_sync.enable &&
+        node->paramList[node->gpu_scalar_array_output_sync.paramIndexScalar] &&
+        node->paramList[node->gpu_scalar_array_output_sync.paramIndexArray])
     {
         // updated scalar with numitems of array
-        node->paramList[node->opencl_scalar_array_output_sync.paramIndexScalar]->u.scalar.u.s =
-            node->paramList[node->opencl_scalar_array_output_sync.paramIndexArray]->u.arr.numitems;
+        node->paramList[node->gpu_scalar_array_output_sync.paramIndexScalar]->u.scalar.u.s =
+            node->paramList[node->gpu_scalar_array_output_sync.paramIndexArray]->u.arr.numitems;
     }
 
     // The num items in an array should not exceed the capacity unless kernels need it for reporting number of items detected (ex. FAST corners)

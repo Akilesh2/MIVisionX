@@ -1,10 +1,10 @@
 __author__      = "Kiriti Nagesh Gowda"
-__copyright__   = "Copyright 2019, AMD MIVisionX"
+__copyright__   = "Copyright 2019 - 2022, AMD MIVisionX"
 __credits__     = ["Mike Schmit; Hansel Yang; Lakshmi Kumar;"]
 __license__     = "MIT"
 __version__     = "1.0"
 __maintainer__  = "Kiriti Nagesh Gowda"
-__email__       = "Kiriti.NageshGowda@amd.com"
+__email__       = "mivisionx.support@amd.com"
 __status__      = "Shipping"
 __script_name__ = "MIVisionX Inference Analyzer"
 
@@ -336,6 +336,10 @@ if __name__ == '__main__':
         #print("ERROR: MIVisionX Inference Analyzer Failed")
         #quit()
 
+    #logos
+    AMD_Epyc_Black_resize = cv2.imread("../../samples/images/amd-epyc-black-resize.png")
+    AMD_ROCm_Black_resize = cv2.imread("../../samples/images/rocm-black-resize.png")
+
     # opencv display window
     windowInput = "MIVisionX Inference Analyzer - Input Image"
     windowResult = "MIVisionX Inference Analyzer - Results"
@@ -414,8 +418,12 @@ if __name__ == '__main__':
 
             # process output and display
             resultImage, topIndex, topProb = processClassificationOutput(resizedFrame, modelName, output)
+            # copy logos to output window
+            frameWindow = cv2.resize(frame, (800,800))
+            frameWindow[0:AMD_ROCm_Black_resize.shape[0], 0:AMD_ROCm_Black_resize.shape[1]] = AMD_ROCm_Black_resize
+            frameWindow[0:AMD_Epyc_Black_resize.shape[0], 607: 607 + AMD_Epyc_Black_resize.shape[1]] = AMD_Epyc_Black_resize
             start = time.time()
-            cv2.imshow(windowInput, frame)
+            cv2.imshow(windowInput, frameWindow)
             cv2.imshow(windowResult, resultImage)
             end = time.time()
             if(verbosePrint):

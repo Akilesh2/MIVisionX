@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2015 - 2022 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,9 @@ THE SOFTWARE.
 // Create HIP Context
 int agoGpuHipCreateContext(AgoContext *context, int deviceID) {
     if (deviceID >= 0) {
+      // release context if already set.
+        agoGpuHipReleaseContext(context);
+        hipDeviceReset();
         // use the given HIP device
         context->hip_context_imported = true;
     }
@@ -61,6 +64,14 @@ int agoGpuHipCreateContext(AgoContext *context, int deviceID) {
     err = hipStreamCreate(&context->hip_stream);
     if (err != hipSuccess) {
         agoAddLogEntry(NULL, VX_FAILURE, "ERROR: hipStreamCreate(%p) => %d (failed)\n", context->hip_stream, err);
+        return -1;
+    }
+
+    //Force creation of the underlying HW queue associated with the HIP stream created above here;
+    // otherwise, the HW queue creation will be delayed until this stream is used in the graph
+    err = hipDeviceSynchronize();
+    if (err != hipSuccess) {
+        agoAddLogEntry(NULL, VX_FAILURE, "ERROR: hipDeviceSynchronize => %d (failed)\n", err);
         return -1;
     }
 
@@ -176,6 +187,13 @@ int agoGpuHipAllocBuffer(AgoData * data) {
         if (data != dataMaster) {
             // special handling for image ROI
             data->hip_memory = dataMaster->hip_memory;
+            if((dataMaster->buffer_sync_flags & AGO_BUFFER_SYNC_FLAG_DIRTY_BY_WRITE)) {
+                // copy the image into HIP buffer because commits aren't done to this buffer
+                hipError_t err = hipMemcpyHtoD((void *)(dataMaster->hip_memory + dataMaster->gpu_buffer_offset), dataMaster->buffer, dataMaster->size);
+                if (err != hipSuccess) {
+                    agoAddLogEntry(&context->ref, VX_FAILURE, "ERROR: agoGpuHipAllocBuffer: hipMemcpyHtoD() => %d\n", err);
+                }
+            }
         }
     }
     else if (data->ref.type == VX_TYPE_ARRAY || data->ref.type == AGO_TYPE_CANNY_STACK) {
@@ -755,6 +773,14 @@ int agoGpuHipSingleNodeWait(AgoGraph * graph, AgoNode * node)
                 }
             }
         }
+    }
+
+    if (node->gpu_scalar_array_output_sync.enable &&
+        node->paramList[node->gpu_scalar_array_output_sync.paramIndexScalar] &&
+        node->paramList[node->gpu_scalar_array_output_sync.paramIndexArray]) {
+        // updated scalar with numitems of array
+        node->paramList[node->gpu_scalar_array_output_sync.paramIndexScalar]->u.scalar.u.s =
+            node->paramList[node->gpu_scalar_array_output_sync.paramIndexArray]->u.arr.numitems;
     }
 
     // The num items in an array should not exceed the capacity unless kernels need it for reporting number of items detected (ex. FAST corners)
