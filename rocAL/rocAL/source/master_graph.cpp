@@ -200,7 +200,7 @@ MasterGraph::run()
     std::cerr<<"\n _output_tensors.size() :: "<<_output_tensors.size();
     // if(_output_tensors.size() != 0)
     // {
-        std::cerr<<"\n Comes to output tensor size check";
+        // std::cerr<<"\n Comes to output tensor size check";
         _ring_buffer.block_if_empty();// wait here if the user thread (caller of this function) is faster in consuming the processed images compare to th output routine in producing them
     // }
 
@@ -639,9 +639,9 @@ void MasterGraph::output_routine()
             for(unsigned cycle_idx = 0; cycle_idx < _user_to_internal_batch_ratio; cycle_idx++)
             {
                 // Swap handles on the input image, so that new image is loaded to be processed
-                std::cerr << "\nBefore load next\n";
+                // std::cerr << "\nBefore load next\n";
                 auto load_ret = _loader_module->load_next();
-                std::cerr << "\nAfter load next\n";
+                // std::cerr << "\nAfter load next\n";
                 if (load_ret != LoaderModuleStatus::OK)
                     THROW("Loader module failed to load next batch of images, status " + TOSTR(load_ret))
                 if (!_processing)
@@ -650,7 +650,7 @@ void MasterGraph::output_routine()
                 auto decode_image_info = _loader_module->get_decode_image_info();
                 auto crop_image_info = _loader_module->get_crop_image_info();
 
-                std::cerr << "\nThis cycle names: " << this_cycle_names.at(0) << "\n";
+                // std::cerr << "\nThis cycle names: " << this_cycle_names.at(0) << "\n";
                 if(this_cycle_names.size() != _internal_batch_size)
                     WRN("Internal problem: names count "+ TOSTR(this_cycle_names.size()))
                 // meta_data lookup is done before _meta_data_graph->process() is called to have the new meta_data ready for processing
@@ -853,7 +853,7 @@ size_t MasterGraph::tensor_output_sample_size()
 
 size_t MasterGraph::tensor_output_byte_size()
 {
-    std::cerr<<"\n _output_tensor_info.data_size():: "<<_output_tensor_info.data_size()<<"\t _max_tensor_type_size:: "<<_max_tensor_type_size;
+    // std::cerr<<"\n _output_tensor_info.data_size():: "<<_output_tensor_info.data_size()<<"\t _max_tensor_type_size:: "<<_max_tensor_type_size;
     return _output_tensor_info.data_size() * _max_tensor_type_size;
 }
 

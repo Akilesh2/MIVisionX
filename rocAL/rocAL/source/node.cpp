@@ -65,7 +65,7 @@ TensorNode::update_src_roi()
     if(_inputs[0]->info().is_image())
     {
         vx_status roi_status;
-        roi_status = vxCopyArrayRange((vx_array)_src_tensor_roi, 0, _batch_size * 4, sizeof(vx_uint32), _inputs[0]->info().get_roi()->data(), VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
+        roi_status = vxCopyArrayRange((vx_array)_src_tensor_roi, 0, _batch_size * 4, sizeof(vx_uint32), _inputs[0]->info().get_roi().data(), VX_WRITE_ONLY, VX_MEMORY_TYPE_HOST);
         if(roi_status != 0)
             THROW(" Failed calling vxCopyArrayRange for width / height status : "+ TOSTR(roi_status))
     }

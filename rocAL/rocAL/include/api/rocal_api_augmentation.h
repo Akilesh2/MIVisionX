@@ -91,7 +91,7 @@ extern "C" RocalTensor ROCAL_API_CALL rocalCopyTensor(RocalContext context, Roca
 extern "C" RocalTensor ROCAL_API_CALL rocalNopTensor(RocalContext context, RocalTensor input, bool is_output);
 
 
-extern "C" RocalTensor ROCAL_API_CALL rocalCropMirrorNormalize(RocalContext context, RocalTensor input,
+extern "C" RocalTensor ROCAL_API_CALL rocalCropMirrorNormalizeTensor(RocalContext context, RocalTensor input,
                                                                   RocalTensorLayout rocal_tensor_layout,
                                                                   RocalTensorOutputType rocal_tensor_output_type,
                                                                   unsigned crop_depth,

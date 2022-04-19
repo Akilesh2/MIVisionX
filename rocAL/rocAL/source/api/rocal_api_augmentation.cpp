@@ -252,6 +252,92 @@ rocalGammaTensor(
 // }
 
 
+
+RocalTensor
+ROCAL_API_CALL rocalCropMirrorNormalizeTensor(RocalContext p_context, 
+                                            RocalTensor p_input,
+                                            RocalTensorLayout rocal_tensor_layout,
+
+                                            RocalTensorOutputType rocal_tensor_output_type,
+                                            unsigned crop_depth,
+                                            unsigned crop_height,
+                                            unsigned crop_width,
+                                            float start_x,
+                                            float start_y,
+                                            float start_z,
+                                            std::vector<float> &mean,
+                                            std::vector<float> &std_dev,
+                                            bool is_output,
+                                            RocalIntParam p_mirror)
+{
+    rocALTensor* output = nullptr;
+    auto context = static_cast<Context*>(p_context);
+    auto input = static_cast<rocALTensor*>(p_input);
+    auto mirror = static_cast<IntParam *>(p_mirror);
+    float mean_acutal = 0, std_actual = 0; // Mean of vectors
+    for(unsigned i = 0; i < mean.size(); i++)
+    {
+        mean_acutal += mean[i];
+        std_actual  += std_dev[i];
+    }
+    mean_acutal /= mean.size();
+    std_actual /= std_dev.size();
+    RocalTensorlayout op_tensorFormat;
+    RocalTensorDataType op_tensorDataType;
+    try
+    {
+        if(!input || !context || crop_width == 0 || crop_height == 0)
+            THROW("Null values passed as input")
+        switch(rocal_tensor_layout)
+        {
+            case 0:
+                op_tensorFormat = RocalTensorlayout::NHWC;
+                break;
+            case 1:
+                op_tensorFormat = RocalTensorlayout::NCHW;
+                break;
+            default:
+                THROW("Unsupported Tensor layout" + TOSTR(rocal_tensor_layout))
+        }
+
+        switch(rocal_tensor_output_type)
+        {
+            case ROCAL_FP32:
+                // std::cerr<<"\n Setting output type to FP32";
+                op_tensorDataType = RocalTensorDataType::FP32;
+                break;
+            case ROCAL_FP16:
+                op_tensorDataType = RocalTensorDataType::FP16;
+                break;
+            case ROCAL_UINT8:
+                op_tensorDataType = RocalTensorDataType::UINT8;
+                break;
+            default:
+                THROW("Unsupported Tensor output type" + TOSTR(rocal_tensor_output_type))
+        }
+        // For the crop mirror normalize resize node, user can create an image with a different width and height
+        rocALTensorInfo output_info = input->info();
+        // output_info.max_width(crop_width);
+        // output_info.max_height(crop_height);
+        // output_info.format(op_tensorFormat);
+        // output_info.data_type(op_tensorDataType);
+        output = context->master_graph->create_tensor(output_info, is_output);
+        // For the nodes that user provides the output size the dimension of all the images after this node will be fixed and equal to that size
+        output->reset_tensor_roi();
+        // std::cerr<<"crop height "<<crop_height<"\t crop width "<<crop_width;
+        context->master_graph->add_node<CropMirrorNormalizeTensorNode>({input}, {output})->init(crop_height, crop_width, start_x, start_y, mean_acutal,
+                                                                                        std_actual , mirror );
+    }
+    catch(const std::exception& e)
+    {
+        context->capture_error(e.what());
+        ERR(e.what());
+    }
+
+    return output; // Changed to input----------------IMPORTANT
+}
+
+
 RocalTensor  ROCAL_API_CALL
 rocalCopyTensor(
         RocalContext p_context,

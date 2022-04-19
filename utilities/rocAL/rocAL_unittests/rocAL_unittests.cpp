@@ -78,7 +78,7 @@ int main(int argc, const char **argv)
 int test(int test_case, const char *path, const char *outName, int rgb, int gpu, int display, int width, int height)
 {
     size_t num_threads = 1;
-    int inputBatchSize = 2;
+    int inputBatchSize = 1;
     int decode_max_width = width * 2;
     int decode_max_height = height * 2;
     // int decode_max_width = 0;
@@ -150,8 +150,8 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         return -1;
     }
 
-    int resize_w = width;
-    int resize_h = height;
+    int resize_w = 100;
+    int resize_h = 100;
     RocalTensor image1, image2;
 
     switch (test_case)
@@ -162,7 +162,8 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         std::vector<float> sdev{1, 1, 1};
         std::cout << ">>>>>>> Running "
                   << " Crop Mirror Normalize Tensor" << std::endl;
-        // image1 = rocalCropMirrorNormalize(handle, input1, tensorLayout, tensorOutputType, 3, resize_w, resize_h, 0, 0, 0, mean, sdev, true);
+        std::cout<<"*********************************************";
+        image1 = rocalCropMirrorNormalizeTensor(handle, input1, tensorLayout, tensorOutputType, 3, resize_w, resize_h, 10, 10, 0, mean, sdev, true);
     }
     break;
     case 1:

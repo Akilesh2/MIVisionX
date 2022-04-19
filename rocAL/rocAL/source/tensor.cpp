@@ -91,30 +91,31 @@ bool operator==(const TensorInfo &rhs, const TensorInfo &lhs)
 //******************************************NEW ROCAL TENSOR******************************************************
 void rocALTensorInfo::reallocate_tensor_roi_buffers()
 {
-    _roi = std::make_shared<std::vector<RocalROI>>(_batch_size);
+    _roi = std::vector<RocalROI>(_batch_size);
     // _roi_height = std::make_shared<std::vector<uint32_t>>(_batch_size);
     // _roi_width = std::make_shared<std::vector<uint32_t>>(_batch_size);
-    _roi->resize(_batch_size);
+    _roi.resize(_batch_size);
     if(layout() == RocalTensorlayout::NCHW)
     {
         for (unsigned i = 0; i < _batch_size; i++)
         {
-            _roi->at(i).x1 = 0;
-            _roi->at(i).y1 = 0;
-            _roi->at(i).x2 = _dims->at(3);
-            _roi->at(i).y2= _dims->at(2);
+            _roi[i].x1 = 0;
+            _roi[i].y1 = 0;
+            _roi[i].x2 = _dims->at(3);
+            _roi[i].y2= _dims->at(2);
         }
     }
     else if(layout() == RocalTensorlayout::NHWC)
     {
         for (unsigned i = 0; i < _batch_size; i++)
         {
-            _roi->at(i).x1 = 0;
-            _roi->at(i).y1 = 0;
-            _roi->at(i).x2 = _dims->at(2);
-            _roi->at(i).y2= _dims->at(1);
+            _roi[i].x1 = 0;
+            _roi[i].y1 = 0;
+            _roi[i].x2 = _dims->at(2);
+            _roi[i].y2= _dims->at(1);
+            std::cerr<<"\n _roi :: "<<_dims->at(0)<<" "<<_dims->at(1)<<" "<<_dims->at(2)<<" "<<_dims->at(3);
+            std::cerr<<"\n checking "<<_roi[i].x2<<" "<<_roi[i].y2;
         }
-
     }
 }
 
@@ -158,27 +159,30 @@ void rocALTensor::update_tensor_roi(const std::vector<uint32_t> &width, const st
         if (width.size() != info().batch_size())
             THROW("The batch size of actual Tensor height and width different from Tensor batch size " + TOSTR(width.size()) + " != " + TOSTR(info().batch_size()))
 
+        std::cerr<<"\n rocALTensor::update_tensor_roi :: "<<_info.get_roi()[0].x1<<" "<<_info.get_roi()[0].y1<<" "<<_info.get_roi()[0].x2<<" "<<_info.get_roi()[0].y2;
         for (unsigned i = 0; i < info().batch_size(); i++)
         {
             if (width[i] > _info.max_width())
             {
                 ERR("Given ROI width is larger than buffer width for tensor[" + TOSTR(i) + "] " + TOSTR(width[i]) + " > " + TOSTR(_info.max_width()))
-                _info.get_roi()->at(i).x2 = _info.max_width();
+                _info.get_roi()[i].x2 = _info.max_width();
             }
             else
             {
-                _info.get_roi()->at(i).x2 = width[i];
+                _info.get_roi()[i].x2 = width[i];
             }
             if (height[i] > _info.max_height())
             {
                 ERR("Given ROI height is larger than buffer with for tensor[" + TOSTR(i) + "] " + TOSTR(height[i]) + " > " + TOSTR(_info.max_height()))
-                _info.get_roi()->at(i).y2 = _info.max_height();
+                _info.get_roi()[i].y2 = _info.max_height();
             }
             else
             {
-                _info.get_roi()->at(i).y2 = height[i];
+                _info.get_roi()[i].y2 = height[i];
             }
         }
+        static int i=0;
+        std::cerr<<"\n"<<" rocALTensor::update_tensor_roi :: "<<_info.get_roi()[0].x1<<" "<<_info.get_roi()[0].y1<<" "<<_info.get_roi()[0].x2 <<" "<<_info.get_roi()[0].y2;
     }
 }
 

@@ -26,6 +26,35 @@ THE SOFTWARE.
 #include "parameter_crop_factory.h"
 #include "parameter_vx.h"
 #include "rocal_api_types.h"
+
+class CropMirrorNormalizeTensorNode : public TensorNode
+{
+public:
+    CropMirrorNormalizeTensorNode(const std::vector<rocALTensor *> &inputs, const std::vector<rocALTensor *> &outputs);
+    CropMirrorNormalizeTensorNode() = delete;
+    void init(int crop_h, int crop_w, float start_x, float start_y, float mean, float std_dev, IntParam *mirror);
+    vx_array return_mirror(){ return _mirror.default_array();  }
+    std::shared_ptr<RocalCropParam> return_crop_param() { return _crop_param; }
+    vx_array get_src_width() { return _src_roi_width; }
+    vx_array get_src_height() { return _src_roi_height; }
+protected:
+    void create_node() override ;
+    void update_node() override;
+private:
+    std::shared_ptr<RocalCropParam> _crop_param;
+    std::vector<vx_float32> _mean_vx, _std_dev_vx;
+    vx_array _mean_array, _std_dev_array,_mirror_array,_src_roi_width,_src_roi_height;
+    float _mean;
+    float _std_dev;
+    unsigned _layout, _roi_type;
+    ParameterVX<int> _mirror;
+
+    constexpr static int   MIRROR_RANGE [2] =  {0, 1};
+};
+
+
+
+/****************************************CropMirrorNormalization**************************/
 class CropMirrorNormalizeNode : public Node
 {
 public:
