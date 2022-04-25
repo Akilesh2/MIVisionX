@@ -320,7 +320,7 @@ ROCAL_API_CALL rocalCropMirrorNormalizeTensor(RocalContext p_context,
         // output_info.max_width(crop_width);
         // output_info.max_height(crop_height);
         // output_info.format(op_tensorFormat);
-        // output_info.data_type(op_tensorDataType);
+        output_info.set_data_type(op_tensorDataType);
         output = context->master_graph->create_tensor(output_info, is_output);
         // For the nodes that user provides the output size the dimension of all the images after this node will be fixed and equal to that size
         output->reset_tensor_roi();

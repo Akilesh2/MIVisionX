@@ -55,6 +55,8 @@ struct CropMirrorNormalizeLocalData
     RpptROI *roi_tensor_Ptr;
     RpptRoiType roiType;
     vx_uint32 chnShift; //NHWC to NCHW
+    vx_enum in_tensor_type ;//= vx_type_e::VX_TYPE_UINT8;
+    vx_enum out_tensor_type;// = vx_type_e::VX_TYPE_UINT8;
     // Rpp32u *srcBatch_width;
     // Rpp32u *srcBatch_height;
     // Rpp32u *dstBatch_width;
@@ -160,17 +162,17 @@ static vx_status VX_CALLBACK refreshCropMirrorNormalize(vx_node node, const vx_r
     if (data->device_type == AGO_TARGET_AFFINITY_CPU)
     {
         std::cerr<<"\n Comes to CPU";
-        vx_enum in_tensor_type = vx_type_e::VX_TYPE_UINT8;
-        vx_enum out_tensor_type = vx_type_e::VX_TYPE_UINT8;
-        STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_DATA_TYPE, &in_tensor_type, sizeof(in_tensor_type)));
-        STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_DATA_TYPE, &out_tensor_type, sizeof(out_tensor_type)));
-        if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_UINT8)
+        // vx_enum in_tensor_type = vx_type_e::VX_TYPE_UINT8;
+        // vx_enum out_tensor_type = vx_type_e::VX_TYPE_UINT8;
+        // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_DATA_TYPE, &in_tensor_type, sizeof(in_tensor_type)));
+        // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_DATA_TYPE, &out_tensor_type, sizeof(out_tensor_type)));
+        if (data->in_tensor_type == vx_type_e::VX_TYPE_UINT8 && data->out_tensor_type == vx_type_e::VX_TYPE_UINT8)
         {
             std::cerr<<"\n ************************************************* Gonna copy tensor source buffer*******************************************";
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_uint8)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_uint8)));
         }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
+        else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
         {
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_float32)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float32)));
@@ -182,15 +184,15 @@ static vx_status VX_CALLBACK refreshCropMirrorNormalize(vx_node node, const vx_r
             // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_float16)));
         //     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[3], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float16)));
         // }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_INT8 && out_tensor_type == vx_type_e::VX_TYPE_INT8)
+        else if (data->in_tensor_type == vx_type_e::VX_TYPE_INT8 && data->out_tensor_type == vx_type_e::VX_TYPE_INT8)
         {
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_int8)));
-            STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[3], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_int8)));
+            STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_int8)));
         }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
+        else if (data->in_tensor_type == vx_type_e::VX_TYPE_UINT8 && data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
         {
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_uint8)));
-            STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[3], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float32)));
+            STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float32)));
         }
         // vx_float16 is not supported. Have to disable it once it is done.
         // else if(in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT16)
@@ -252,8 +254,8 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
     vx_status return_status = VX_SUCCESS;
     CropMirrorNormalizeLocalData *data = NULL;
     STATUS_ERROR_CHECK(vxQueryNode(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
-    vx_enum in_tensor_type = vx_type_e::VX_TYPE_UINT8;
-    vx_enum out_tensor_type = vx_type_e::VX_TYPE_UINT8;
+    // vx_enum in_tensor_type = vx_type_e::VX_TYPE_UINT8;
+    // vx_enum out_tensor_type = vx_type_e::VX_TYPE_UINT8;
     // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_DATA_TYPE, &in_tensor_type, sizeof(in_tensor_type)));
     // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[3], VX_TENSOR_DATA_TYPE, &out_tensor_type, sizeof(out_tensor_type)));
     Rpp32u N, C;
@@ -654,6 +656,7 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
         }
 
         std::cerr<<"\n Gonna call RPP";
+        std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$destination datatype      "<<data->dst_desc_ptr->dataType;
         rpp_status = rppt_crop_mirror_normalize_host(data->pSrc, data->src_desc_ptr,
                                                 data->pDst, data->dst_desc_ptr,
                                                  data->mean,data->std_dev,
@@ -893,17 +896,35 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
     data->src_desc_ptr = &data->srcDesc;
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_NUMBER_OF_DIMS, &data->src_desc_ptr->numDims, sizeof(data->src_desc_ptr->numDims)));
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_DIMS, &data->in_tensor_dims, sizeof(vx_size) * data->src_desc_ptr->numDims));
-    STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0],VX_TENSOR_DATA_TYPE, &data->src_desc_ptr->dataType, sizeof(data->src_desc_ptr->dataType)));
-    if(data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_UINT8)
-        data->src_desc_ptr->dataType = RpptDataType::U8;
+    STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0],VX_TENSOR_DATA_TYPE, &data->in_tensor_type, sizeof(data->out_tensor_type)));
+    if(data->in_tensor_type == vx_type_e::VX_TYPE_UINT8)
+        data->in_tensor_type= RpptDataType::U8;
+    
+    else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
+        data->in_tensor_type = RpptDataType::F32;
+    // else if (data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_FLOAT16)
+    //     data->src_desc_ptr->dataType = RpptDataType::F16;
+    else
+        data->in_tensor_type = RpptDataType::I8;
+
+
+
      data->src_desc_ptr->offsetInBytes = 0;
     // Querying for output tensor
     data->dst_desc_ptr = &data->dstDesc;
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_NUMBER_OF_DIMS, &data->dst_desc_ptr->numDims, sizeof(data->dst_desc_ptr->numDims)));
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_DIMS, &data->out_tensor_dims, sizeof(vx_size) * data->dst_desc_ptr->numDims));
-    STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2],VX_TENSOR_DATA_TYPE, &data->dst_desc_ptr->dataType, sizeof(data->dst_desc_ptr->dataType)));
-    if(data->dst_desc_ptr->dataType == vx_type_e::VX_TYPE_UINT8)
-        data->dst_desc_ptr->dataType = RpptDataType::U8;
+    STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2],VX_TENSOR_DATA_TYPE, &data->out_tensor_type, sizeof(data->out_tensor_type)));
+    if(data->out_tensor_type == vx_type_e::VX_TYPE_UINT8)
+        data->out_tensor_type= RpptDataType::U8;
+    
+    else if (data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
+        data->out_tensor_type = RpptDataType::F32;
+    // else if (data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_FLOAT16)
+    //     data->src_desc_ptr->dataType = RpptDataType::F16;
+    else
+        data->out_tensor_type = RpptDataType::I8;
+
      data->dst_desc_ptr->offsetInBytes = 0;
     // std::cerr<<"\n INIT4";
     // std::cerr<<'\nbathcsize'<<data->nbatchSize;

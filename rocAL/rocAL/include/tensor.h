@@ -67,6 +67,8 @@ struct rocALTensorInfo
 
     // Setting properties required for Image / Video
     void set_roi_type(RocalROIType roi_type) { _roi_type = roi_type; }
+    void set_data_type(RocalTensorDataType data_type) { _data_type = _data_type; }
+
     void set_tensor_layout(RocalTensorlayout layout)
     {
         if(layout != RocalTensorlayout::NONE)
@@ -93,6 +95,7 @@ struct rocALTensorInfo
         _layout = layout;
     }
     void set_color_format(RocalColorFormat color_format) { _color_format = color_format; }
+    // void set _data_type(Rocal)
 
     unsigned num_of_dims() const { return _num_of_dims; }
     unsigned batch_size() const { return _batch_size; }
@@ -270,6 +273,7 @@ private:
     unsigned _stride;//!< if different from width
     std::shared_ptr<std::vector<uint32_t>> _roi_width;//!< The actual image width stored in the buffer, it's always smaller than _width/_batch_size. It's created as a vector of pointers to integers, so that if it's passed from one image to another and get updated by one and observed for all.
     std::shared_ptr<std::vector<uint32_t>> _roi_height;//!< The actual image height stored in the buffer, it's always smaller than _height. It's created as a vector of pointers to integers, so that if it's passed from one image to another and get updated by one changes can be observed for all.
+
     void reallocate_tensor_roi_buffers();
     bool _is_image = false;
     size_t _data_type_size;
