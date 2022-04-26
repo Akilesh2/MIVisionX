@@ -170,7 +170,7 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
     {
         std::cout << ">>>>>>> Running "
                   << "rocalBrightness" << std::endl;
-        image1 = rocalBrightnessTensor(handle, input1, true);
+        image1 = rocalBrightnessTensor(handle, input1, tensorLayout, tensorOutputType, true);
     }
     break;
     case 2:

@@ -24,7 +24,7 @@ THE SOFTWARE.
 #define MIVISIONX_ROCAL_API_AUGMENTATION_H
 #include "rocal_api_types.h"
 
-extern "C" RocalTensor ROCAL_API_CALL rocalBrightnessTensor(RocalContext context, RocalTensor input, bool is_output,
+extern "C" RocalTensor ROCAL_API_CALL rocalBrightnessTensor(RocalContext context, RocalTensor input,RocalTensorLayout rocal_tensor_layout,RocalTensorOutputType rocal_tensor_output_type, bool is_output,
                                                    RocalFloatParam alpha = NULL, RocalFloatParam beta = NULL);
 
 
