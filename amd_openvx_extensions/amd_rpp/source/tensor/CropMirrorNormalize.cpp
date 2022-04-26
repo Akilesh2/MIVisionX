@@ -656,7 +656,7 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
         }
 
         std::cerr<<"\n Gonna call RPP";
-        std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$destination datatype      "<<data->dst_desc_ptr->dataType;
+        std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$destination datatype      "<<data->in_tensor_type;
         rpp_status = rppt_crop_mirror_normalize_host(data->pSrc, data->src_desc_ptr,
                                                 data->pDst, data->dst_desc_ptr,
                                                  data->mean,data->std_dev,
@@ -898,14 +898,14 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_DIMS, &data->in_tensor_dims, sizeof(vx_size) * data->src_desc_ptr->numDims));
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0],VX_TENSOR_DATA_TYPE, &data->in_tensor_type, sizeof(data->out_tensor_type)));
     if(data->in_tensor_type == vx_type_e::VX_TYPE_UINT8)
-        data->in_tensor_type= RpptDataType::U8;
+        data->src_desc_ptr->dataType = RpptDataType::U8;
     
     else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
-        data->in_tensor_type = RpptDataType::F32;
+        data->src_desc_ptr->dataType = RpptDataType::F32;
     // else if (data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_FLOAT16)
     //     data->src_desc_ptr->dataType = RpptDataType::F16;
-    else
-        data->in_tensor_type = RpptDataType::I8;
+    else if (data->in_tensor_type == vx_type_e::VX_TYPE_INT8)
+        data->src_desc_ptr->dataType = RpptDataType::I8;
 
 
 
@@ -916,14 +916,14 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_DIMS, &data->out_tensor_dims, sizeof(vx_size) * data->dst_desc_ptr->numDims));
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2],VX_TENSOR_DATA_TYPE, &data->out_tensor_type, sizeof(data->out_tensor_type)));
     if(data->out_tensor_type == vx_type_e::VX_TYPE_UINT8)
-        data->out_tensor_type= RpptDataType::U8;
+        data->dst_desc_ptr->dataType= RpptDataType::U8;
     
     else if (data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
-        data->out_tensor_type = RpptDataType::F32;
+        data->dst_desc_ptr->dataType = RpptDataType::F32;
     // else if (data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_FLOAT16)
     //     data->src_desc_ptr->dataType = RpptDataType::F16;
-    else
-        data->out_tensor_type = RpptDataType::I8;
+    else if (data->out_tensor_type == vx_type_e::VX_TYPE_INT8)
+        data->dst_desc_ptr->dataType = RpptDataType::I8;
 
      data->dst_desc_ptr->offsetInBytes = 0;
     // std::cerr<<"\n INIT4";
