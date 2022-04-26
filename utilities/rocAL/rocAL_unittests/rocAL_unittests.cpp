@@ -177,7 +177,7 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
     {
         std::cout << ">>>>>>> Running "
                   << "rocalGamma" << std::endl;
-        image1 = rocalGammaTensor(handle, input1, true);
+        image1 = rocalGammaTensor(handle, input1, tensorLayout, tensorOutputType, true);
     }
     break;
     default:

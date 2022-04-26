@@ -101,6 +101,8 @@ RocalTensor ROCAL_API_CALL
 rocalGammaTensor(
         RocalContext p_context,
         RocalTensor p_input,
+        RocalTensorLayout rocal_tensor_layout,
+        RocalTensorOutputType rocal_tensor_output_type,
         bool is_output,
         RocalFloatParam p_alpha)
 {
@@ -110,8 +112,37 @@ rocalGammaTensor(
     auto context = static_cast<Context*>(p_context);
     auto input = static_cast<rocALTensor*>(p_input);
     auto alpha = static_cast<FloatParam*>(p_alpha);
+    RocalTensorlayout op_tensorFormat;
+    RocalTensorDataType op_tensorDataType;
     try
     {
+        switch(rocal_tensor_layout)
+        {
+            case 0:
+                op_tensorFormat = RocalTensorlayout::NHWC;
+                break;
+            case 1:
+                op_tensorFormat = RocalTensorlayout::NCHW;
+                break;
+            default:
+                THROW("Unsupported Tensor layout" + TOSTR(rocal_tensor_layout))
+        }
+
+        switch(rocal_tensor_output_type)
+        {
+            case ROCAL_FP32:
+                // std::cerr<<"\n Setting output type to FP32";
+                op_tensorDataType = RocalTensorDataType::FP32;
+                break;
+            case ROCAL_FP16:
+                op_tensorDataType = RocalTensorDataType::FP16;
+                break;
+            case ROCAL_UINT8:
+                op_tensorDataType = RocalTensorDataType::UINT8;
+                break;
+            default:
+                THROW("Unsupported Tensor output type" + TOSTR(rocal_tensor_output_type))
+        }
         output = context->master_graph->create_tensor(input->info(), is_output);
 
         context->master_graph->add_node<GammaTensorNode>({input}, {output})->init(alpha);
