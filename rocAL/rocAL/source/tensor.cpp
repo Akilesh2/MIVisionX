@@ -114,7 +114,7 @@ void rocALTensorInfo::reallocate_tensor_roi_buffers()
             _roi[i].x2 = _dims->at(2);
             _roi[i].y2= _dims->at(1);
             std::cerr<<"\n _roi :: "<<_dims->at(0)<<" "<<_dims->at(1)<<" "<<_dims->at(2)<<" "<<_dims->at(3);
-            std::cerr<<"\n checking "<<_roi[i].x2<<" "<<_roi[i].y2;
+            std::cerr<<"\n checking "<<_roi[i].x2<<" "<<_roi[i].y2<<"\n";
         }
     }
 }
@@ -162,6 +162,7 @@ void rocALTensor::update_tensor_roi(const std::vector<uint32_t> &width, const st
         std::cerr<<"\n rocALTensor::update_tensor_roi :: "<<_info.get_roi()[0].x1<<" "<<_info.get_roi()[0].y1<<" "<<_info.get_roi()[0].x2<<" "<<_info.get_roi()[0].y2;
         for (unsigned i = 0; i < info().batch_size(); i++)
         {
+            std::cerr<<"before ifffffffffffffffffffffff"<<width[i]<<"   "<<_info.max_width();
             if (width[i] > _info.max_width())
             {
                 ERR("Given ROI width is larger than buffer width for tensor[" + TOSTR(i) + "] " + TOSTR(width[i]) + " > " + TOSTR(_info.max_width()))
@@ -170,19 +171,27 @@ void rocALTensor::update_tensor_roi(const std::vector<uint32_t> &width, const st
             else
             {
                 _info.get_roi()[i].x2 = width[i];
+                std::cerr<<"\nafter assigningggggggggggggg"<<width[i]<<"  "<<_info.get_roi()[i].x2<<"\n";
             }
+            std::cerr<<"before if heighttttttttttttt"<<height[i]<<"   "<<_info.max_height();
+
             if (height[i] > _info.max_height())
             {
                 ERR("Given ROI height is larger than buffer with for tensor[" + TOSTR(i) + "] " + TOSTR(height[i]) + " > " + TOSTR(_info.max_height()))
                 _info.get_roi()[i].y2 = _info.max_height();
+                // _info.get_roi()[i].x1=9;
+                // _info.get_roi()[i].
             }
             else
             {
-                _info.get_roi()[i].y2 = height[i];
+                std::cerr<<"$$$$$$$"<<_info.get_roi()[i].y2<<"\n";
+                _info.get_roi()[0].y2 =height[i];
+                std::cerr<<"\nafter assigning heighttttttt  "<<height[i]<<"  "<<_info.get_roi()[0].y2<<"\n";
+
             }
         }
         static int i=0;
-        std::cerr<<"\n"<<" rocALTensor::update_tensor_roi :: "<<_info.get_roi()[0].x1<<" "<<_info.get_roi()[0].y1<<" "<<_info.get_roi()[0].x2 <<" "<<_info.get_roi()[0].y2;
+        std::cerr<<"\n"<<" rocALTensor::update_tensor_roi :: "<<_info.get_roi()[0].x1<<" "<<_info.get_roi()[0].y1<<" "<<_info.get_roi()[0].x2 <<" "<<_info.get_roi()[0].y2<<"\n";
     }
 }
 
@@ -442,16 +451,16 @@ unsigned TensorInfo::get_roi_height(int batch_idx) const
         THROW("Accessing uninitialized int parameter associated with image height")
     return _roi_height->at(batch_idx);
 }
-void TensorInfo::reallocate_tensor_roi_buffers()
-{
-    _roi_height = std::make_shared<std::vector<uint32_t>>(_batch_size);
-    _roi_width = std::make_shared<std::vector<uint32_t>>(_batch_size);
-    for (unsigned i = 0; i < _batch_size; i++)
-    {
-        _roi_height->at(i) = height();
-        _roi_width->at(i) = width();
-    }
-}
+// void TensorInfo::reallocate_tensor_roi_buffers()
+// {
+//     _roi_height = std::make_shared<std::vector<uint32_t>>(_batch_size);
+//     _roi_width = std::make_shared<std::vector<uint32_t>>(_batch_size);
+//     for (unsigned i = 0; i < _batch_size; i++)
+//     {
+//         _roi_height->at(i) = height();
+//         _roi_width->at(i) = width();
+//     }
+// }
 TensorInfo::TensorInfo() : _type(Type::UNKNOWN),
                            _width(0),
                            _height(0),
@@ -484,6 +493,7 @@ TensorInfo::TensorInfo(
 {
     vx_size pix_size = tensor_data_size(data_type);
     unsigned alignpixels = TENSOR_WIDTH_ALIGNMENT;
+    std::cerr<<"################ TensorInfo :: "<<_width <<" "<<_height<<"\n";
     if (alignpixels == 0)
         _stride = width_ * pix_size;
     else
