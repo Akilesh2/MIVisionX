@@ -48,6 +48,15 @@ extern "C"  RaliImage  RALI_API_CALL raliJpegFileSource(RaliContext context,
                                                         RaliImageSizeEvaluationPolicy decode_size_policy = RALI_USE_MOST_FREQUENT_SIZE,
                                                         unsigned max_width = 0, unsigned max_height = 0, RaliDecoderType rali_decoder_type=RaliDecoderType::RALI_DECODER_TJPEG);
 
+extern "C"  RaliImage  RALI_API_CALL raliJpegExternalFileSource(RaliContext context,
+                                                        const char* source_path,
+                                                        RaliImageColor rali_color_format,
+                                                        bool is_output = false,
+                                                        bool shuffle = false,
+                                                        bool loop = false,
+                                                        RaliImageSizeEvaluationPolicy decode_size_policy = RALI_USE_MOST_FREQUENT_SIZE,
+                                                        unsigned max_width = 0, unsigned max_height = 0, RaliDecoderType rali_decoder_type=RaliDecoderType::RALI_DECODER_TJPEG);
+
 /// Creates JPEG image reader and decoder. It allocates the resources and objects required to read and decode Jpeg images stored on the file systems. It accepts external sharding information to load a singe shard. only
 /// \param context Rali context
 /// \param source_path A NULL terminated char string pointing to the location on the disk
@@ -393,7 +402,7 @@ extern "C"  RaliImage  RALI_API_CALL raliFusedJpegCrop(RaliContext context,
                                                         bool shuffle = false,
                                                         bool loop = false,
                                                         RaliImageSizeEvaluationPolicy decode_size_policy = RALI_USE_MAX_SIZE,
-                                                        unsigned max_width = 0, unsigned max_height = 0, 
+                                                        unsigned max_width = 0, unsigned max_height = 0,
                                                         RaliFloatParam area_factor = NULL, RaliFloatParam aspect_ratio = NULL,
                                                         RaliFloatParam y_drift_factor = NULL, RaliFloatParam x_drift_factor = NULL);
 
@@ -656,6 +665,7 @@ extern "C"  RaliImage  RALI_API_CALL raliRawCIFAR10Source(RaliContext context,
                                                         bool is_output ,
                                                         unsigned out_width, unsigned out_height, const char* filename_prefix = "",
                                                         bool loop = false);
+
 
 ///
 /// \param context

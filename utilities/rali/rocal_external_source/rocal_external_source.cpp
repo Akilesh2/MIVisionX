@@ -79,7 +79,7 @@ int main(int argc, const char ** argv)
 
     std::cout << ">>> Running on " << (processing_device?"GPU":"CPU") << std::endl;
     RaliImageColor color_format = RaliImageColor::RALI_COLOR_RGB_PLANAR;
-    if (rgb == 0) 
+    if (rgb == 0)
       color_format = RaliImageColor::RALI_COLOR_U8;
     else if (rgb == 1)
       color_format = RaliImageColor::RALI_COLOR_RGB24;
@@ -109,7 +109,7 @@ int main(int argc, const char ** argv)
     /*>>>>>>>>>>>>>>>>>>> Graph description <<<<<<<<<<<<<<<<<<<*/
     RaliImage input1;
 
-    input1 = raliJpegExternalFileSource(handle, folderPath1,  color_format, true, decode_width, decode_height, false, RALI_USE_USER_GIVEN_SIZE, decode_width, decode_height, RaliDecoderType::RALI_DECODER_TJPEG);
+    input1 = raliJpegExternalFileSource(handle, folderPath1, color_format, false, false, false, RALI_USE_USER_GIVEN_SIZE, decode_width, decode_height, RaliDecoderType::RALI_DECODER_TJPEG);
 
     if(raliGetStatus(handle) != RALI_OK)
     {
@@ -118,6 +118,7 @@ int main(int argc, const char ** argv)
     }
     // create Cifar10 meta data reader
     //raliCreateTextCifar10LabelReader(handle, folderPath1, "data_batch");
+    std::vector<std::string> file_names = {"000000012698.jpg", "000000053304.jpg", "000000123824.jpg", "000000180366.jpg", "000000198759.jpg", "000000239654.jpg"};
 
 #if 0
     const size_t num_values = 3;
@@ -177,7 +178,7 @@ int main(int argc, const char ** argv)
     std::cout << "<Remaining_images, augmentation_count> " << raliGetRemainingImages(handle) << " " << raliGetAugmentationBranchCount(handle) << std::endl;
     // prefetch and feed data for the input pipeline
     for (int i=0; i< prefetch_queue_depth; i++) {
-      
+
     }
 
 
@@ -185,7 +186,7 @@ int main(int argc, const char ** argv)
     int n = raliGetAugmentationBranchCount(handle);
     int h = n * raliGetOutputHeight(handle);
     int w = raliGetOutputWidth(handle);
-    int p = (((color_format ==  RaliImageColor::RALI_COLOR_RGB24 ) || 
+    int p = (((color_format ==  RaliImageColor::RALI_COLOR_RGB24 ) ||
               (color_format ==  RaliImageColor::RALI_COLOR_RGB_PLANAR )) ? 3 : 1);
     std::cout << "output width "<< w << " output height "<< h << " color planes "<< p << std::endl;
     const unsigned number_of_cols = 1;    // no augmented case
@@ -195,8 +196,8 @@ int main(int argc, const char ** argv)
     cv::Mat mat_input(h, w, cv_color_format);
     cv::Mat mat_color;
     int col_counter = 0;
-    cv::namedWindow( "output", CV_WINDOW_AUTOSIZE );
- 
+    // cv::namedWindow( "output", CV_WINDOW_AUTOSIZE );
+
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     int counter = 0;
     std::vector<std::string> names;
@@ -207,19 +208,28 @@ int main(int argc, const char ** argv)
     int iter_cnt = 0;
     float  pmul = 2.0f/255;
     float  padd = -1.0f;
+    int index = 0;
     while (!raliIsEmpty(handle) && (iter_cnt < 100))
     {
+        std::vector<std::string> input_images;
+        for(int i = 0; i < inputBatchSize; i++)
+        {
+            input_images.push_back(std::string(folderPath1) + file_names.at(0));
+            file_names.pop_back();
+            std::cerr<<"\n Input images :: "<<input_images[i];
+        }
+        raliExternalSourceFeedInput(handle, input_images, input_images, NULL, {}, {}, 1, 1, RaliExtSourceMode (0), RaliTensorLayout (0));
         if(raliRun(handle) != 0)
             break;
 
         if(display)
             raliCopyToOutput(handle, mat_input.data, h*w*p);
-        else
-            raliCopyToOutputTensor32(handle, out_tensor, RaliTensorLayout::RALI_NCHW, pmul, pmul, pmul, padd, padd, padd, 0);
+        // else
+        //     raliCopyToOutputTensor32(handle, out_tensor, RaliTensorLayout::RALI_NCHW, pmul, pmul, pmul, padd, padd, padd, 0);
         counter += inputBatchSize;
         raliGetImageLabels(handle, labels.data());
         unsigned imagename_size = raliGetImageNameLen(handle,ImageNameLen);
-        char imageNames[imagename_size]; 
+        char imageNames[imagename_size];
         raliGetImageName(handle,imageNames);
         std::string imageNamesStr(imageNames);
 
@@ -235,12 +245,16 @@ int main(int argc, const char ** argv)
 
         if(!display)
             continue;
-
+        std::vector<int> compression_params;
+        compression_params.push_back(IMWRITE_PNG_COMPRESSION);
+        compression_params.push_back(9);
+        std::string out_filename = std::string("output") + std::to_string(index) + ".png";
         if(color_format ==  RaliImageColor::RALI_COLOR_RGB24 )
         {
             mat_input.copyTo(mat_output(cv::Rect(  col_counter*w, 0, w, h)));
             cv::cvtColor(mat_output, mat_color, CV_RGB2BGR);
-            cv::imshow("output",mat_color);
+            // cv::imshow("output",mat_color);
+            cv::imwrite(out_filename, mat_color, compression_params);
         }
         else if (color_format == RaliImageColor::RALI_COLOR_RGB_PLANAR )
         {
@@ -260,15 +274,18 @@ int main(int argc, const char ** argv)
                     }
                 }
             }
-            cv::imshow("output",mat_output);
+            // cv::imshow("output",mat_output);
+            cv::imwrite(out_filename, mat_color, compression_params);
         }
         else
         {
             mat_input.copyTo(mat_output(cv::Rect(  col_counter*w, 0, w, h)));
-            cv::imshow("output",mat_output);
+            // cv::imshow("output",mat_output);
+            cv::imwrite(out_filename, mat_color, compression_params);
         }
         cv::waitKey(1);
         col_counter = (col_counter+1)%number_of_cols;
+        index++;
     }
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();

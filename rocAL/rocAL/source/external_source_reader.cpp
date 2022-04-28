@@ -62,6 +62,7 @@ Reader::Status ExternalSourceReader::initialize(ReaderConfig desc)
     _loop = desc.loop();
     _mode = desc.mode();
     _end_of_sequence = false;
+    _file_data.reserve(_batch_count);
     return ret;
 }
 
@@ -73,35 +74,46 @@ void ExternalSourceReader::incremenet_read_ptr()
 
 size_t ExternalSourceReader::open()
 {
+    // std::cerr<<"\n Calls the ExternalSourceReader::open()";
     if (_mode == FileMode::FILENAME) {
         std::string next_file_name;
         bool ret = pop_file_name(next_file_name);   // Get next file name: blocking call, will wait till next file is received from external source
         if (_end_of_sequence || !ret)
           return 0;
         incremenet_read_ptr();
-        // prefix with folder_path of exists        
+        // prefix with folder_path of exists
         if (!_folder_path.empty())
-          next_file_name = _folder_path + "/" + next_file_name;
+        //   next_file_name = _folder_path + "/" + next_file_name; // check added by Rajy shobi
+            next_file_name = next_file_name;
+        _last_id= next_file_name;
+        std::cerr<<"\n Gonna read the file :: "<<next_file_name;
         filesys::path pathObj(next_file_name);
         if(filesys::exists(pathObj) && filesys::is_regular_file(pathObj))
         {
+        // std::cerr<<"\n **********1****************";
           _current_fPtr = fopen(next_file_name.c_str(), "rb");// Open the file,
+        //   std::cerr<<"\n **********2****************";
           if(!_current_fPtr) // Check if it is ready for reading
               return 0;
-
+// std::cerr<<"\n **********3****************";
           fseek(_current_fPtr, 0 , SEEK_END);// Take the file read pointer to the end
-
+// std::cerr<<"\n **********4****************";
           _current_file_size = ftell(_current_fPtr);// Check how many bytes are there between and the current read pointer position (end of the file)
-
+// std::cerr<<"\n **********5****************";
           if(_current_file_size == 0)
           { // If file is empty continue
+        //   std::cerr<<"\n **********6****************";
               fclose(_current_fPtr);
               _current_fPtr = nullptr;
               return 0;
           }
-
+// std::cerr<<"\n **********7****************";
           fseek(_current_fPtr, 0 , SEEK_SET);// Take the file pointer back to the start
+// std::cerr<<"\n **********8****************";
+            std::cerr<<"\nnext_file_name.data() "<<next_file_name.data();
+            std::cerr<<"\n _current_file_size"<<_current_file_size;
           _file_data[_curr_file_idx] = std::make_tuple(next_file_name.data(), (size_t)_current_file_size, 0, 0, 0);
+// std::cerr<<"\n **********9****************";
         }
     } else{
         std::tuple<char*, size_t, int, int, int> image;
@@ -125,6 +137,7 @@ size_t ExternalSourceReader::read_data(unsigned char* buf, size_t read_size)
         read_size = (read_size > _current_file_size) ? _current_file_size : read_size;
 
         size_t actual_read_size = fread(buf, sizeof(unsigned char), read_size, _current_fPtr);
+        std::cerr<<"\n ExternalSourceReader::read_data - FileMode::FILENAME";
         return actual_read_size;
     } else {
         char *file_data_ptr = std::get<0>(_file_data[_curr_file_idx]);
@@ -203,7 +216,7 @@ bool ExternalSourceReader::pop_file_name(std::string& file_name)
       return true;
     }else
       return false;
-    
+
 }
 
 void ExternalSourceReader::push_file_data(std::tuple<char*, size_t, int, int, int>& image)
@@ -234,6 +247,7 @@ void ExternalSourceReader::feed_file_names(const std::vector<std::string>& file_
 {
     for (unsigned n=0; n < num_images; n++) {
       push_file_name(file_names[n]);
+      std::cerr<<"\n ExternalSourceReader::feed_file_names ::"<<file_names[n];
     }
     _end_of_sequence = eos;
 }

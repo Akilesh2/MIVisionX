@@ -61,6 +61,10 @@ void ImageLoader::set_prefetch_queue_depth(size_t prefetch_queue_depth)
     _prefetch_queue_depth = prefetch_queue_depth;
 }
 
+void ImageLoader::feed_external_input(std::vector<std::string> input_images, std::vector<std::string> labels, unsigned char *input_buffer, std::vector<unsigned> roi_width, std::vector<unsigned> roi_height, unsigned int max_width, unsigned int max_height, FileMode mode)
+{
+    _image_loader->feed_external_input(input_images, labels, input_buffer, roi_width, roi_height, max_width, max_height, mode);
+}
 
 size_t
 ImageLoader::remaining_count()
@@ -148,6 +152,7 @@ void ImageLoader::initialize(ReaderConfig reader_cfg, DecoderConfig decoder_cfg,
         de_init();
         throw;
     }
+    std::cerr<<"\n &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& Resize vectors in Decode image info &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&";
     _decoded_img_info._image_names.resize(_batch_size);
     _decoded_img_info._roi_height.resize(_batch_size);
     _decoded_img_info._roi_width.resize(_batch_size);
@@ -166,6 +171,7 @@ void ImageLoader::start_loading()
         THROW("start_loading() should be called after initialize() function is called")
 
     _remaining_image_count = _image_loader->count();
+    INFO("Remaining Image count in ImageLoader::start_loading "+TOSTR(_remaining_image_count));
     _internal_thread_running = true;
     _load_thread = std::thread(&ImageLoader::load_routine, this);
 }
@@ -185,6 +191,8 @@ ImageLoader::load_routine()
 
         auto load_status = LoaderModuleStatus::NO_MORE_DATA_TO_READ;
         {
+            _decoded_img_info._image_names.reserve(_batch_size*2);
+            std::cerr<<"\n Setting Image size vector to 2";
             load_status = _image_loader->load(data,
                                               _decoded_img_info._image_names,
                                               _output_image->info().width(),
@@ -195,7 +203,8 @@ ImageLoader::load_routine()
                                               _decoded_img_info._original_height,
                                               _output_image->info().color_format(), _decoder_keep_original);
 
-
+_decoded_img_info._image_names[0]="murugan";
+_decoded_img_info._image_names[1]="thunai";
             if (load_status == LoaderModuleStatus::OK)
             {
                 if (_randombboxcrop_meta_data_reader)

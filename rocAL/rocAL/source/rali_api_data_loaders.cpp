@@ -149,7 +149,7 @@ raliJpegFileSourceSingleShard(
                                                        source_path, "");
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -227,7 +227,7 @@ raliJpegFileSource(
 
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -302,7 +302,7 @@ raliJpegExternalFileSource(
 
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
         context->set_internal_batch_size(context->user_batch_size());   // for external_source internal batch size has to be same as user
 
@@ -313,17 +313,40 @@ raliJpegExternalFileSource(
                               color_format );
         output = context->master_graph->create_loader_output_image(info);
 
-        context->master_graph->add_node<ImageLoaderNode>({}, {output})->init(context->user_batch_size(),
-                                                                          source_path, "",
-                                                                          std::map<std::string, std::string>(),
-                                                                          StorageType::EXTERNAL_FILE_SOURCE,
-                                                                          decType,
-                                                                          shuffle,
-                                                                          loop,
-                                                                          context->user_batch_size(),
-                                                                          context->master_graph->mem_type(),
-                                                                          context->master_graph->meta_data_reader(),
-                                                                          decoder_keep_original);
+        // context->master_graph->add_node<ImageLoaderSingleShardNode>({}, {output})->init(shard_id, shard_count,
+        //                                                                                 source_path, "",
+        //                                                                                 StorageType::FILE_SYSTEM,
+        //                                                                                 DecoderType::TURBO_JPEG,
+        //                                                                                 shuffle,
+        //                                                                                 loop,
+        //                                                                                 context->user_batch_size(),
+        //                                                                                 context->master_graph->mem_type(),
+        //                                                                                 context->master_graph->meta_data_reader(),
+        //                                                                                 decoder_keep_original
+        //                                                                                 );
+
+        // context->master_graph->add_node<ImageLoaderNode>({}, {output})->init(1, //context->user_batch_size(),
+        context->master_graph->add_node<ImageLoaderSingleShardNode>({}, {output})->init(0, 1,
+                                                                                        source_path, "",
+                                                                                        StorageType::EXTERNAL_FILE_SOURCE,
+                                                                                        decType,
+                                                                                        shuffle,
+                                                                                        loop,
+                                                                                        context->user_batch_size(),
+                                                                                        context->master_graph->mem_type(),
+                                                                                        context->master_graph->meta_data_reader(),
+                                                                                        decoder_keep_original);
+
+                                                                        //   source_path, "",
+                                                                        //   std::map<std::string, std::string>(),
+                                                                        //   StorageType::EXTERNAL_FILE_SOURCE,
+                                                                        //   decType,
+                                                                        //   shuffle,
+                                                                        //   loop,
+                                                                        //   context->user_batch_size(),
+                                                                        //   context->master_graph->mem_type(),
+                                                                        //   context->master_graph->meta_data_reader(),
+                                                                        //   decoder_keep_original);
         context->master_graph->set_loop(loop);
 
         if(is_output)
@@ -376,7 +399,7 @@ raliSequenceReader(
 
         if(internal_shard_count < 1 )
             THROW("Shard count should be bigger than 0")
-        
+
         // Set default step and stride values if 0 is passed
         step = (step == 0)? 1 : step;
         stride = (stride == 0)? 1 : stride;
@@ -404,7 +427,7 @@ raliSequenceReader(
                                                                             context->master_graph->sequence_batch_size(),
                                                                             context->master_graph->mem_type(),
                                                                             context->master_graph->meta_data_reader(),
-                                                                            decoder_keep_original, "", 
+                                                                            decoder_keep_original, "",
                                                                             sequence_length,
                                                                             step, stride);
         context->master_graph->set_loop(loop);
@@ -462,7 +485,7 @@ raliSequenceReaderSingleShard(
 
         if(shard_id >= shard_count)
             THROW("Shard id should be smaller than shard count")
-        
+
         // Set default step and stride values if 0 is passed
         step = (step == 0)? 1 : step;
         stride = (stride == 0)? 1 : stride;
@@ -481,7 +504,7 @@ raliSequenceReaderSingleShard(
         output = context->master_graph->create_loader_output_image(info);
 
         context->master_graph->add_node<ImageLoaderSingleShardNode>({}, {output})->init(shard_id, shard_count,
-                                                                                        source_path, "", 
+                                                                                        source_path, "",
                                                                                         StorageType::SEQUENCE_FILE_SYSTEM,
                                                                                         DecoderType::TURBO_JPEG,
                                                                                         shuffle,
@@ -547,7 +570,7 @@ raliJpegCaffe2LMDBRecordSource(
                                                        source_path, "");
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -626,7 +649,7 @@ raliJpegCaffe2LMDBRecordSourceSingleShard(
                                                        source_path, "");
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -700,7 +723,7 @@ raliJpegCaffeLMDBRecordSource(
                                                        source_path, "");
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -780,7 +803,7 @@ raliJpegCaffeLMDBRecordSourceSingleShard(
                                                        source_path, "");
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -1017,7 +1040,7 @@ raliJpegCOCOFileSource(
 
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -1098,7 +1121,7 @@ raliJpegCOCOFileSourceSingleShard(
                                                        source_path, json_path);
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -1180,7 +1203,7 @@ raliFusedJpegCrop(
 
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -1262,7 +1285,7 @@ raliJpegCOCOFileSourcePartial(
 
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -1351,7 +1374,7 @@ raliJpegCOCOFileSourcePartialSingleShard(
 
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -1436,7 +1459,7 @@ raliJpegTFRecordSource(
                                                        source_path, "");
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -1513,7 +1536,7 @@ raliJpegTFRecordSourceSingleShard(
                                                        source_path, "");
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -1658,7 +1681,7 @@ raliRawTFRecordSourceSingleShard(
 
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(out_width)+ " height = "+ TOSTR(out_height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(out_width, out_height,
@@ -1743,7 +1766,7 @@ raliFusedJpegCropSingleShard(
 
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,
@@ -1891,7 +1914,7 @@ raliVideoFileSourceSingleShard(
             THROW("Sequence length passed should be bigger than 0")
         // Set video loader flag in master_graph
         context->master_graph->set_video_loader_flag();
-        
+
         if(shard_count < 1 )
             THROW("Shard count should be bigger than 0")
 
@@ -2209,7 +2232,7 @@ raliRawCIFAR10Source(
         auto [width, height] = std::make_tuple(out_width, out_height);
         auto [color_format, num_of_planes] = convert_color_format(rali_color_format);
 
-        
+
         INFO("Internal buffer size width = "+ TOSTR(width)+ " height = "+ TOSTR(height) + " depth = "+ TOSTR(num_of_planes))
 
         auto info = ImageInfo(width, height,

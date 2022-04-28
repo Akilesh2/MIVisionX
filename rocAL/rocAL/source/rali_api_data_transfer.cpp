@@ -94,14 +94,22 @@ raliCopyToOutput(
 RaliStatus RALI_API_CALL
 raliExternalSourceFeedInput(
         RaliContext p_context,
-        RaliImage Input,
+        std::vector<std::string> input_images,
+        std::vector<std::string> labels,
+        unsigned char *input_buffer,
+        std::vector<unsigned> roi_width,
+        std::vector<unsigned> roi_height,
+        unsigned int max_width,
+        unsigned int max_height,
         RaliExtSourceMode mode,
         RaliTensorLayout layout)
 {
     auto context = static_cast<Context*>(p_context);
     try
     {
-        //context->master_graph->feed_input(input, mode, layout);
+        FileMode file_mode = (FileMode) mode;
+        RaliTensorFormat format = (RaliTensorFormat) layout;
+        context->master_graph->feed_external_input(input_images, labels, input_buffer, roi_width, roi_height, max_width, max_height, file_mode, format);
         // should call root_node process_input
     }
     catch(const std::exception& e)

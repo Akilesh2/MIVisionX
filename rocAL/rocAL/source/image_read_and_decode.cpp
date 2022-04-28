@@ -27,8 +27,8 @@ THE SOFTWARE.
 #include "image_read_and_decode.h"
 #include "external_source_reader.h"
 
-std::tuple<Decoder::ColorFormat, unsigned > 
-interpret_color_format(RaliColorFormat color_format ) 
+std::tuple<Decoder::ColorFormat, unsigned >
+interpret_color_format(RaliColorFormat color_format )
 {
     switch (color_format) {
         case RaliColorFormat::RGB24:
@@ -42,7 +42,7 @@ interpret_color_format(RaliColorFormat color_format )
 
         default:
             throw std::invalid_argument("Invalid color format\n");
-    }    
+    }
 }
 
 
@@ -66,7 +66,7 @@ ImageReadAndDecode::~ImageReadAndDecode()
 {
     _reader = nullptr;
     _decoder.clear();
-}   
+}
 
 void
 ImageReadAndDecode::create(ReaderConfig reader_config, DecoderConfig decoder_config, int batch_size)
@@ -104,7 +104,7 @@ ImageReadAndDecode::create(ReaderConfig reader_config, DecoderConfig decoder_con
     _reader_type = reader_config.type();
 }
 
-void 
+void
 ImageReadAndDecode::reset()
 {
     // TODO: Reload images from the folder if needed
@@ -135,7 +135,14 @@ ImageReadAndDecode::set_batch_random_bbox_crop_coords(std::vector<std::vector<fl
     _crop_coords_batch = crop_coords;
 }
 
-LoaderModuleStatus 
+void ImageReadAndDecode::feed_external_input(std::vector<std::string> input_images, std::vector<std::string> labels, unsigned char *input_buffer, std::vector<unsigned> roi_width, std::vector<unsigned> roi_height, unsigned int max_width, unsigned int max_height, FileMode mode)
+{
+    _reader->feed_file_names(input_images, 2, false);
+    // loader->feed_external_input(input_images, labels, input_buffer, roi_width, roi_height, max_width, max_height, mode);
+}
+
+
+LoaderModuleStatus
 ImageReadAndDecode::load(unsigned char* buff,
                          std::vector<std::string>& names,
                          const size_t max_decoded_width,
@@ -147,12 +154,14 @@ ImageReadAndDecode::load(unsigned char* buff,
                          RaliColorFormat output_color_format,
                          bool decoder_keep_original )
 {
+    std::cerr<<"\n Comes to ImageReadAndDecode::load";
     if(max_decoded_width == 0 || max_decoded_height == 0 )
         THROW("Zero image dimension is not valid")
     if(!buff)
         THROW("Null pointer passed as output buffer")
     if(_reader->count_items() < _batch_size)
         return LoaderModuleStatus::NO_MORE_DATA_TO_READ;
+    // std::cerr<<"\n ImageReadAndDecode::load CP1";
     // load images/frames from the disk and push them as a large image onto the buff
     unsigned file_counter = 0;
     const auto ret = interpret_color_format(output_color_format);
@@ -163,7 +172,7 @@ ImageReadAndDecode::load(unsigned char* buff,
     bool is_external_source = (_reader_type == StorageType::EXTERNAL_FILE_SOURCE);
     bool skip_decode = false;
 
-    // Decode with the height and size equal to a single image  
+    // Decode with the height and size equal to a single image
     // File read is done serially since I/O parallelization does not work very well.
     _file_load_time.start();// Debug timing
     if (_decoder_config._type == DecoderType::SKIP_DECODE) {
@@ -183,7 +192,7 @@ ImageReadAndDecode::load(unsigned char* buff,
             _image_names[file_counter] = _reader->id();
             _reader->close();
            // _compressed_image_size[file_counter] = fsize;
-            names[file_counter] = _image_names[file_counter];
+            // names[file_counter] = _image_names[file_counter];
             roi_width[file_counter] = max_decoded_width;
             roi_height[file_counter] = max_decoded_height;
             actual_width[file_counter] = max_decoded_width;
@@ -193,6 +202,7 @@ ImageReadAndDecode::load(unsigned char* buff,
         skip_decode = true;
         //_file_load_time.end();// Debug timing
     } else if (is_external_source) {
+        // std::cerr<<"\n ImageReadAndDecode::load CP2";
         auto ext_reader = std::dynamic_pointer_cast<ExternalSourceReader>(_reader);
         if (ext_reader->mode() == FileMode::RAWDATA_UNCOMPRESSED){
           while ((file_counter != _batch_size) && _reader->count_items() > 0)
@@ -212,7 +222,7 @@ ImageReadAndDecode::load(unsigned char* buff,
               _image_names[file_counter] = _reader->id();
               ext_reader->get_dims(width, height, channels);
 
-              names[file_counter] = _image_names[file_counter];
+            //   names[file_counter] = _image_names[file_counter];
               roi_width[file_counter] = width;
               roi_height[file_counter] = height;
               actual_width[file_counter] = width;
@@ -221,6 +231,30 @@ ImageReadAndDecode::load(unsigned char* buff,
               file_counter++;
           }
           skip_decode = true;
+        }
+        else
+        {
+            while ((file_counter != _batch_size) && _reader->count_items() > 0)
+            {
+                std::cerr<<"\n ImageReadAndDecode::load CP3";
+                size_t fsize = _reader->open();
+                std::cerr<<"\n  ImageReadAndDecode::load CP4  "<<fsize;
+                if (fsize == 0) {
+                    WRN("Opened file " + _reader->id() + " of size 0");
+                    continue;
+                }
+                _compressed_buff[file_counter].reserve(fsize);
+                _actual_read_size[file_counter] = _reader->read_data(_compressed_buff[file_counter].data(), fsize);
+                std::cerr<<"\n ImageReadAndDecode::load CP5";
+                _image_names[file_counter] = _reader->id();
+                std::cerr<<"\n ImageReadAndDecode::load CP6";
+                _reader->close();
+                std::cerr<<"\n ImageReadAndDecode::load CP7";
+                _compressed_image_size[file_counter] = fsize;
+                std::cerr<<"\n ImageReadAndDecode::load CP8";
+                file_counter++;
+                std::cerr<<"\n ImageReadAndDecode::load CP9";
+            }
         }
     }
     else {
@@ -238,7 +272,7 @@ ImageReadAndDecode::load(unsigned char* buff,
             _compressed_image_size[file_counter] = fsize;
             file_counter++;
         }
-        
+
         if (_randombboxcrop_meta_data_reader)
         {
             //Fetch the crop co-ordinates for a batch of images
@@ -251,12 +285,14 @@ ImageReadAndDecode::load(unsigned char* buff,
 
     _decode_time.start();// Debug timing
     if (!skip_decode) {
+        std::cerr<<"\n ImageReadAndDecode::load CP10";
         for (size_t i = 0; i < _batch_size; i++)
             _decompressed_buff_ptrs[i] = buff + image_size * i;
-
-#pragma omp parallel for num_threads(_batch_size)  // default(none) TBD: option disabled in Ubuntu 20.04
+        std::cerr<<"\n ImageReadAndDecode::load CP11";
+// #pragma omp parallel for num_threads(_batch_size)  // default(none) TBD: option disabled in Ubuntu 20.04
         for (size_t i = 0; i < _batch_size; i++)
         {
+            std::cerr<<"\n Batch Size:: "<<i;
             // initialize the actual decoded height and width with the maximum
             _actual_decoded_width[i] = max_decoded_width;
             _actual_decoded_height[i] = max_decoded_height;
@@ -289,7 +325,7 @@ ImageReadAndDecode::load(unsigned char* buff,
                                     decoder_color_format, _decoder_config, keep_original) != Decoder::Status::OK) {
                 // try decoding with OpenCV decoder:: seems like opencv also failing in those images
 #if 0//ENABLE_OPENCV
-                WRN("Using OpenCV for decode");                
+                WRN("Using OpenCV for decode");
                 if (_decoder_cv[i] && _decoder_cv[i]->decode(_compressed_buff[i].data(), _compressed_image_size[i], _decompressed_buff_ptrs[i],
                                         max_decoded_width, max_decoded_height,
                                         original_width, original_height,
@@ -304,12 +340,29 @@ ImageReadAndDecode::load(unsigned char* buff,
             _actual_decoded_width[i] = scaledw;
             _actual_decoded_height[i] = scaledh;
         }
+                std::cerr<<"\n ImageReadAndDecode::load CP12";
+        // std::vector<std::string> temp;
+        // temp.resize(2);
+        // temp = _image_names;
+        // names = temp;
+        // copy(_image_names.begin(), _image_names.end(), back_inserter(names));
+        // names.resize(3);
         for (size_t i = 0; i < _batch_size; i++) {
-            names[i] = _image_names[i];           
+            std::cerr<<"\n index :: "<<i;
+            std::cerr<<"\n _image_names[i]:: "<<_image_names[i];
+            // std::cerr<<"\n names[i]:: "<<names[i];
+            std::cerr<<"\n Printing both names";
+            // names[i] = "shobi"; //std::string(_image_names[i]);
+                std::cerr<<"\n ImageReadAndDecode::load CP13";
+                // exit(0);
             roi_width[i] = _actual_decoded_width[i];
+                std::cerr<<"\n ImageReadAndDecode::load CP14";
             roi_height[i] = _actual_decoded_height[i];
+                std::cerr<<"\n ImageReadAndDecode::load CP15";
             actual_width[i] = _original_width[i];
+                std::cerr<<"\n ImageReadAndDecode::load CP16";
             actual_height[i] = _original_height[i];
+                std::cerr<<"\n ImageReadAndDecode::load CP17";
         }
     }
     _bbox_coords.clear();
