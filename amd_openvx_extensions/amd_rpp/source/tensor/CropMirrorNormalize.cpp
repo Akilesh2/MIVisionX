@@ -84,12 +84,6 @@ static vx_status VX_CALLBACK refreshCropMirrorNormalize(vx_node node, const vx_r
     // std::cerr<<"batch"<<data->batch_size<<'\n';
 
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[1], 0, data->nbatchSize * 4, sizeof(unsigned), data->roi_tensor_Ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    // STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[5], 0, data->batch_size, sizeof(vx_uint32), data->crop_depth, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    // STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[6], 0, data->batch_size, sizeof(vx_uint32), data->crop_height, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    // STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[7], 0, data->batch_size, sizeof(vx_uint32), data->crop_width, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    // STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[3], 0, data->nbatchSize * 4, sizeof(unsigned), data->roi_tensor_Ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-
-    // std::cerr<<"REF1\n";
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[4], 0, data->nbatchSize, sizeof(vx_uint32), data->crop_w, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     // std::cout<<"crop_width in refresh"<<data->crop_w[0];
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[5], 0, data->nbatchSize, sizeof(vx_uint32), data->crop_h, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
@@ -648,11 +642,10 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
 
         // std::cerr<<"batchsize"<<data->nbatchSize;
         // std::cerr<<"\n bbox values :: ";
-
         for(int i = 0; i < data->nbatchSize; i++)
         {
-            data->roi_tensor_Ptr[i].xywhROI.roiWidth = 100; // for debugging purpose. Need to change // Akilesh
-            std::cerr<<"\n data->roi_tensor_Ptr values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
+            // data->roi_tensor_Ptr[i].xywhROI.roiWidth = 100; // for debugging purpose. Need to change // Akilesh
+            std::cerr<<"\n #########################################data->roi_tensor_Ptr values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
         }
 
         std::cerr<<"\n Gonna call RPP";

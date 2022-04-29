@@ -163,7 +163,7 @@ static vx_status VX_CALLBACK processGammaCorrection(vx_node node, const vx_refer
         {
                         data->roi_tensor_Ptr[i].xywhROI.roiWidth=600;
 
-            std::cerr<<"\n bbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
+            std::cerr<<"\n####################### bbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
         }
         std::cerr<<"\nDatatype  "<<data->in_tensor_type;
 

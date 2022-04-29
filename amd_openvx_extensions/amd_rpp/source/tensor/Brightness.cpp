@@ -166,7 +166,7 @@ static vx_status VX_CALLBACK processBrightness(vx_node node, const vx_reference 
         for(int i = 0; i < data->nbatchSize; i++)
         {
             data->roi_tensor_Ptr[i].xywhROI.roiWidth=600;
-            std::cerr<<"\n bbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
+            std::cerr<<"\n ###################bbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
         }
         std::cerr<<"\nDatatype  "<<data->in_tensor_type;
         rpp_status = rppt_brightness_host(data->pSrc, data->src_desc_ptr, data->pDst, data->src_desc_ptr, data->alpha, data->beta, data->roi_tensor_Ptr, data->roiType, data->rppHandle);

@@ -108,6 +108,9 @@ struct rocALTensorInfo
     RocalTensorDataType data_type() const { return _data_type; }
     RocalTensorlayout layout() const { return _layout; }
     std::vector<RocalROI> get_roi() const { return _roi; }
+    std::vector<RocalROI>* set_roi_width()  { return &_roi; }
+    std::vector<RocalROI>* set_roi_height()  { return &_roi; }
+
     RocalColorFormat color_format() const {return _color_format; }
     Type type() const { return _type; }
     bool is_image() const { return _is_image; }
