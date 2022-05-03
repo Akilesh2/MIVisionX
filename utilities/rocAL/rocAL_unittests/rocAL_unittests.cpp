@@ -78,7 +78,7 @@ int main(int argc, const char **argv)
 int test(int test_case, const char *path, const char *outName, int rgb, int gpu, int display, int width, int height)
 {
     size_t num_threads = 1;
-    int inputBatchSize = 1;
+    int inputBatchSize = 4;
     int decode_max_width = width * 2;
     int decode_max_height = height * 2;
     // int decode_max_width = 0;
@@ -123,7 +123,7 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
     RocalMetaData meta_data = rocalCreateLabelReader(handle, path);
 
     RocalTensor input1;
-    RocalTensorLayout tensorLayout = RocalTensorLayout::ROCAL_NHWC;
+    RocalTensorLayout tensorLayout = RocalTensorLayout::ROCAL_NCHW;
     RocalTensorOutputType tensorOutputType = RocalTensorOutputType::ROCAL_FP32;
 
     // The jpeg file loader can automatically select the best size to decode all images to that size
@@ -135,11 +135,11 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
 #else
     if (decode_max_height <= 0 || decode_max_width <= 0)
     {
-        input1 = rocalJpegFileSource(handle, path, color_format, num_threads, false, true, false);
+        input1 = rocalJpegFileSource(handle, path, color_format, num_threads, false, false, false);
     }
     else
     {
-        input1 = rocalJpegFileSource(handle, path, color_format, num_threads, true, true, false,
+        input1 = rocalJpegFileSource(handle, path, color_format, num_threads, false, false, false,
                                     ROCAL_USE_USER_GIVEN_SIZE, decode_max_width, decode_max_height);
     }
 #endif
@@ -150,8 +150,8 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         return -1;
     }
 
-    int resize_w = 100;
-    int resize_h = 100;
+    int resize_w = 300;
+    int resize_h = 300;
     RocalTensor image1, image2;
 
     switch (test_case)
@@ -241,6 +241,7 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         switch (tensorOutputType)
         {
         case ROCAL_FP32:
+
             rocalCopyToTensorOutput(handle, (float *)mat_input.data, h * w * p);
             break;
         case ROCAL_UINT8:

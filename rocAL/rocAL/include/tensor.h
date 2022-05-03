@@ -67,7 +67,7 @@ struct rocALTensorInfo
 
     // Setting properties required for Image / Video
     void set_roi_type(RocalROIType roi_type) { _roi_type = roi_type; }
-    void set_data_type(RocalTensorDataType data_type) { _data_type = _data_type; }
+    void set_data_type(RocalTensorDataType data_type) { _data_type = data_type; }
 
     void set_tensor_layout(RocalTensorlayout layout)
     {
