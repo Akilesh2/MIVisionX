@@ -78,7 +78,7 @@ int main(int argc, const char **argv)
 int test(int test_case, const char *path, const char *outName, int rgb, int gpu, int display, int width, int height)
 {
     size_t num_threads = 1;
-    int inputBatchSize = 3;
+    int inputBatchSize = 5;
     int decode_max_width = width * 2;
     int decode_max_height = height * 2;
     // int decode_max_width = 0;
@@ -124,7 +124,7 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
 
     RocalTensor input1;
     RocalTensorLayout tensorLayout = RocalTensorLayout::ROCAL_NCHW;
-    RocalTensorOutputType tensorOutputType = RocalTensorOutputType::ROCAL_FP32;
+    RocalTensorOutputType tensorOutputType = RocalTensorOutputType::ROCAL_UINT8;
 
     // The jpeg file loader can automatically select the best size to decode all images to that size
     // User can alternatively set the size or change the policy that is used to automatically find the size

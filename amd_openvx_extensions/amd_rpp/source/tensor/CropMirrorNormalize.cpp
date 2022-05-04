@@ -240,7 +240,7 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
     STATUS_ERROR_CHECK(vxQueryNode(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
    
     Rpp32u N, C;
-    N = data->batch_size;
+    N = data->nbatchSize;
     C = data->channels;
 
   /*  if (data->device_type == AGO_TARGET_AFFINITY_GPU)
@@ -627,7 +627,7 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
         // if (vxstatus != VX_SUCCESS)
         //     return vxstatus;
 
-        // std::cerr<<"batchsize"<<data->nbatchSize;
+        std::cerr<<"batchsize"<<data->nbatchSize;
         // std::cerr<<"\n bbox values :: ";
         for(int i = 0; i < data->nbatchSize; i++)
         {
@@ -644,32 +644,33 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
 //           temp[i]=temp[i] / 255.0;
         // }
 // data->pSrc=temp;
-        
-unsigned long long ioBufferSize = (unsigned long long)data->src_desc_ptr->h * (unsigned long long)data->src_desc_ptr->w * (unsigned long long)data->src_desc_ptr->c * (unsigned long long)data->src_desc_ptr->n;
-        // ioBufferSize = 100;
-        std::cerr<<"NHWC" <<(unsigned long long)data->src_desc_ptr->h << "  "<< (unsigned long long)data->src_desc_ptr->w << "  "<<(unsigned long long)data->src_desc_ptr->c <<"  "<< (unsigned long long)data->src_desc_ptr->n;
-        float *temp = ((float*)calloc( ioBufferSize,sizeof(float) ));
-        // std::cerr<<"grgrggrgrggrg  " <<temp[0]<<" "<<temp[1];
-        std ::cerr<<"\n ioBufferSize "<<ioBufferSize;
-        for (int i=0;i< ioBufferSize;i++)
-        {
-            temp[i]=(float)(*(unsigned char*)(data->pSrc));
+       if(0)
+       { 
+                unsigned long long ioBufferSize = (unsigned long long)data->src_desc_ptr->h * (unsigned long long)data->src_desc_ptr->w * (unsigned long long)data->src_desc_ptr->c * (unsigned long long)data->src_desc_ptr->n;
+                // ioBufferSize = 100;
+                std::cerr<<"NHWC" <<(unsigned long long)data->src_desc_ptr->h << "  "<< (unsigned long long)data->src_desc_ptr->w << "  "<<(unsigned long long)data->src_desc_ptr->c <<"  "<< (unsigned long long)data->src_desc_ptr->n;
+                float *temp = ((float*)calloc( ioBufferSize,sizeof(float) ));
+                // std::cerr<<"grgrggrgrggrg  " <<temp[0]<<" "<<temp[1];
+                std ::cerr<<"\n ioBufferSize "<<ioBufferSize;
+                for (int i=0;i< ioBufferSize;i++)
+                {
+                    temp[i]=(float)(*(unsigned char*)(data->pSrc));
 
-            // std::cerr<<temp[i]<<"\n";//<<" "<<(int)(*(unsigned char*)(data->pSrc))<<" "<< (float)(*(unsigned char*)(data->pSrc)) <<"\n";
-            data->pSrc +=1;
+                    // std::cerr<<temp[i]<<"\n";//<<" "<<(int)(*(unsigned char*)(data->pSrc))<<" "<< (float)(*(unsigned char*)(data->pSrc)) <<"\n";
+                    data->pSrc +=1;
 
-        }
-
+                }
+       }
 
 
         std::cerr<<"\n Gonna call RPP";
-        data->src_desc_ptr->dataType=RpptDataType::F32;   
-        data->dst_desc_ptr->dataType=RpptDataType::F32;
+        // data->src_desc_ptr->dataType=RpptDataType::F32;   
+        // data->dst_desc_ptr->dataType=RpptDataType::F32;
         std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ source  datatype      "<<data->src_desc_ptr->dataType;
         std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ destination datatype      "<<data->src_desc_ptr->dataType;
 
         
-        rpp_status = rppt_crop_mirror_normalize_host(temp, data->src_desc_ptr,
+        rpp_status = rppt_crop_mirror_normalize_host(data->pSrc, data->src_desc_ptr,
                                                 data->pDst, data->dst_desc_ptr,
                                                  data->mean,data->std_dev,
                                                  data->mirror, data->roi_tensor_Ptr,data->roiType,
