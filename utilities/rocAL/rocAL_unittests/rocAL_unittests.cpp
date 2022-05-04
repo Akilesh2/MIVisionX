@@ -78,7 +78,7 @@ int main(int argc, const char **argv)
 int test(int test_case, const char *path, const char *outName, int rgb, int gpu, int display, int width, int height)
 {
     size_t num_threads = 1;
-    int inputBatchSize = 4;
+    int inputBatchSize = 3;
     int decode_max_width = width * 2;
     int decode_max_height = height * 2;
     // int decode_max_width = 0;
