@@ -49,6 +49,7 @@ public:
     virtual void create_node() = 0;
     virtual void update_node() = 0;
     virtual void update_src_roi();
+
     const std::vector<rocALTensor *> _inputs;
     const std::vector<rocALTensor *> _outputs;
     std::shared_ptr<Graph> _graph = nullptr;

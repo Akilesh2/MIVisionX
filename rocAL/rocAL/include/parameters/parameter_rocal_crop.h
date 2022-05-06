@@ -29,6 +29,7 @@ public:
     RocalCropParam() = delete;
     RocalCropParam(unsigned int batch_size): CropParam(batch_size)
     {
+        std::cerr<<"In RocalCropParam  batchsize -> "<<batch_size;
         crop_height_factor = default_crop_height_factor();
         crop_width_factor  = default_crop_width_factor();
     }

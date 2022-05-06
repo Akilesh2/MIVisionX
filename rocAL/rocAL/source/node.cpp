@@ -43,6 +43,7 @@ TensorNode::create(std::shared_ptr<Graph> graph)
         vx_status roi_status;
         std::vector<uint32_t> _src_roi;
         _src_roi.reserve(_batch_size * 4);
+        std::cerr<<"\nIn node.cpp batch_size_  "<<_batch_size<<"\n";
         _src_tensor_roi = vxCreateArray(vxGetContext((vx_reference) _graph->get()), VX_TYPE_UINT32, _batch_size * 4);
         roi_status = vxAddArrayItems(_src_tensor_roi, _batch_size * 4, _src_roi.data(), sizeof(vx_uint32));
         if (roi_status != 0)
@@ -57,6 +58,7 @@ TensorNode::update_parameters()
 {
     update_node();
     update_src_roi();
+    // return_batch_size();
 }
 
 void
@@ -69,7 +71,12 @@ TensorNode::update_src_roi()
         if(roi_status != 0)
             THROW(" Failed calling vxCopyArrayRange for width / height status : "+ TOSTR(roi_status))
     }
+    // std::cerr<<
 }
+// size_t TensorNode::return_batch_size()
+// {
+//     std::cerr<<"\n In return_batch_size "<<_outputs[0]->info().batch_size();
+// }
 
 
 //**********************************************Node*********************************************

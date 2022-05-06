@@ -819,17 +819,19 @@ size_t MasterGraph::compute_optimum_internal_batch_size(size_t user_batch_size, 
     }
     size_t ret = user_batch_size;
     size_t CORE_COUNT = THREAD_COUNT / DEFAULT_SMT_COUNT;
-    std::cerr<<"THREAD_COUNT "<<THREAD_COUNT<<" DEFAULT_SMT_COUNT "<<DEFAULT_SMT_COUNT;
+    std::cerr<<"THREAD_COUNT "<<THREAD_COUNT<< "  DEFAULT_SMT_COUNT "<< DEFAULT_SMT_COUNT<<" before  "<< ret <<" user_batch_size  "<<user_batch_size<<"\n";
     if(CORE_COUNT <= 0)
         THROW("Wrong core count detected less than 0")
 
     // for( size_t i = CORE_COUNT; i <= THREAD_COUNT; i++)
+    // {
     //     if(user_batch_size % i == 0)
     //     {
     //         ret = i;
     //         break;
     //     }
-CORE_COUNT =1;
+    // }
+CORE_COUNT =1;//checking
     for(size_t i = CORE_COUNT; i > 1; i--)
     {
         std::cerr<<"cccccccccccccccccCORE_COUNT "<< i;
@@ -839,6 +841,8 @@ CORE_COUNT =1;
             break;
         }
     }
+            std::cerr<<" after  "<< ret <<" after user_batch_size  "<<user_batch_size<<"\n";
+
     INFO("User batch size "+ TOSTR(user_batch_size)+" Internal batch size set to "+ TOSTR(ret))
     return ret;
 }

@@ -39,7 +39,7 @@ void CropMirrorNormalizeTensorNode::create_node()
 
     if(_crop_param->crop_h == 0 || _crop_param->crop_w == 0)
         THROW("Uninitialized destination dimension - Invalid Crop Sizes")
-
+    std::cerr<<"bbbbb_batch_size  "<<_batch_size<<"\n";
     _crop_param->create_array(_graph);
     _mean_vx.resize(_batch_size);
     _std_dev_vx.resize(_batch_size);
@@ -76,6 +76,7 @@ void CropMirrorNormalizeTensorNode::create_node()
     vx_scalar roi_type = vxCreateScalar(vxGetContext((vx_reference)_graph->get()),VX_TYPE_UINT32,&_roi_type);
             // vxExtrppNode_CropMirrorNormalize(vx_graph graph, vx_tensor pSrc, vx_array srcROI, vx_tensor pDst, vx_array dstROI, vx_array x1, vx_array y1, vx_array mean, vx_array std_dev, vx_array flip, vx_scalar is_packed, vx_scalar chnShift,vx_scalar layout, vx_scalar roiType, vx_uint32 nbatchSize)
     // std::cerr<<"&&&&&&"<<_crop_param->cropw_arr;
+    std::cerr<<" node_crop_mirror_normalize "<<_batch_size<<"\n";
     _node = vxExtrppNode_CropMirrorNormalize(_graph->get(), _inputs[0]->handle(),
                                                    _src_tensor_roi,_outputs[0]->handle(),_src_tensor_roi,_crop_param->cropw_arr, _crop_param->croph_arr, _crop_param->x1_arr, _crop_param->y1_arr,
                                                     _mean_array, _std_dev_array, _mirror.default_array() , is_packed, chnToggle,layout, roi_type, _batch_size);
