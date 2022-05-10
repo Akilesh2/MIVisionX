@@ -37,7 +37,6 @@ rocalBrightnessTensor(
         RocalContext p_context,
         RocalTensor p_input,
         RocalTensorLayout rocal_tensor_layout,
-
         RocalTensorOutputType rocal_tensor_output_type,
         bool is_output,
         RocalFloatParam p_alpha,
@@ -385,7 +384,6 @@ ROCAL_API_CALL rocalCropMirrorNormalizeTensor(RocalContext p_context,
         }
         // For the crop mirror normalize resize node, user can create an image with a different width and height
         rocALTensorInfo output_info = input->info();
-        std::cerr<<"$$$$$$$$$$$$$$$$$$$$$$$$output_info.max_width()  "<< input->info().get_roi()[0].x2;
         // output_info.max_width(crop_width);
         // output_info.max_height(crop_height);
         // output_info.format(op_tensorFormat);
@@ -393,7 +391,6 @@ ROCAL_API_CALL rocalCropMirrorNormalizeTensor(RocalContext p_context,
         output = context->master_graph->create_tensor(output_info, is_output);
         // For the nodes that user provides the output size the dimension of all the images after this node will be fixed and equal to that size
         output->reset_tensor_roi();
-        // std::cerr<<"crop height "<<crop_height<"\t crop width "<<crop_width;
         context->master_graph->add_node<CropMirrorNormalizeTensorNode>({input}, {output})->init(crop_height, crop_width, start_x, start_y, mean_acutal,
                                                                                         std_actual , mirror );
     }

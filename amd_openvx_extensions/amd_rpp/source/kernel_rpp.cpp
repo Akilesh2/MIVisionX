@@ -1910,16 +1910,11 @@ VX_API_ENTRY vx_node VX_API_CALL vxExtrppNode_CropMirrorNormalize(vx_graph graph
     {
         vx_uint32 dev_type = getGraphAffinity(graph);
         vx_scalar DEV_TYPE = vxCreateScalar(vxGetContext((vx_reference)graph), VX_TYPE_UINT32, &dev_type);
-        std::cerr<<" In vxExtrppNode_CropMirrorNormalize "<< nbatchSize;
         vx_scalar NBATCHSIZE = vxCreateScalar(vxGetContext((vx_reference)graph), VX_TYPE_UINT32, &nbatchSize);
         vx_reference params[] = {
             (vx_reference)pSrc,
-            // (vx_reference)srcImgWidth,
-            // (vx_reference)srcImgHeight,
             (vx_reference)srcROI,
             (vx_reference)pDst,
-            // (vx_reference)dstImgWidth,
-            // (vx_reference)dstImgHeight,
             (vx_reference)dstROI,
             (vx_reference)crop_w,
             (vx_reference)crop_h,
