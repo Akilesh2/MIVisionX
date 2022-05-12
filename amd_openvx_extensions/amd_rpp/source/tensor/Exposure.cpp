@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 - 2022 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019 - 2021 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@ THE SOFTWARE.
 #include "internal_publishKernels.h"
 #define NUM_OF_DIMS 4
 
-struct BrightnessLocalData
+struct ExposureLocalData
 {
     RPPCommonHandle handle;
     rppHandle_t rppHandle;
@@ -31,14 +31,19 @@ struct BrightnessLocalData
     Rpp32u nbatchSize;
     RppPtr_t pSrc;
     RppPtr_t pDst;
-    vx_float32 *alpha;
-    vx_float32 *beta;
+    vx_float32 *exposure_value;
     vx_size channels;
     RpptDescPtr src_desc_ptr;
+    // RpptDescPtr dst_desc_ptr;
+
     RpptDesc srcDesc;
+    RpptDesc dstDesc;
+
     RpptROI *roi_tensor_Ptr;
     RpptRoiType roiType;
-    size_t in_tensor_dims[NUM_OF_DIMS];
+    size_t in_tensor_dims[NUM_OF_DIMS]; // will have NHWC info
+    size_t out_tensor_dims[NUM_OF_DIMS];
+
     vx_enum in_tensor_type ;
     vx_enum out_tensor_type; // will have NHWC info
 #if ENABLE_OPENCL
@@ -50,14 +55,12 @@ struct BrightnessLocalData
 #endif
 };
 
-static vx_status VX_CALLBACK refreshBrightness(vx_node node, const vx_reference *parameters, vx_uint32 num, BrightnessLocalData *data)
+static vx_status VX_CALLBACK refreshExposure(vx_node node, const vx_reference *parameters, vx_uint32 num, ExposureLocalData *data)
 {
-    std::cerr<<"\nrefresh";
+
     vx_status status = VX_SUCCESS;
-    STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[1], 0, data->nbatchSize * 4, sizeof(unsigned), data->roi_tensor_Ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[3], 0, data->nbatchSize, sizeof(vx_float32), data->alpha, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[4], 0, data->nbatchSize, sizeof(vx_float32), data->beta, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    std::cerr<<"\nalpha value"<<data->alpha<<'\n';
+    STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[1], 0, data->nbatchSize *4, sizeof(unsigned),data->roi_tensor_Ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
+    STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[3], 0, data->nbatchSize, sizeof(vx_float32), data->exposure_value, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     if (data->device_type == AGO_TARGET_AFFINITY_GPU)
     {
 #if ENABLE_OPENCL
@@ -70,12 +73,16 @@ static vx_status VX_CALLBACK refreshBrightness(vx_node node, const vx_reference 
     }
     if (data->device_type == AGO_TARGET_AFFINITY_CPU)
     {
+        // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_uint8)));
+        // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_uint8)));
         if (data->in_tensor_type == vx_type_e::VX_TYPE_UINT8 && data->out_tensor_type == vx_type_e::VX_TYPE_UINT8)
         {
+            std::cerr<<"\n ************************************************* U8 to U8 Gonna copy tensor source buffer*******************************************";
+
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_uint8)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_uint8)));
         }
-        else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
+        else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
         {
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_float32)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float32)));
@@ -89,11 +96,14 @@ static vx_status VX_CALLBACK refreshBrightness(vx_node node, const vx_reference 
         // }
         else if (data->in_tensor_type == vx_type_e::VX_TYPE_INT8 && data->out_tensor_type == vx_type_e::VX_TYPE_INT8)
         {
+
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_int8)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_int8)));
         }
         else if (data->in_tensor_type == vx_type_e::VX_TYPE_UINT8 && data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
         {
+            std::cerr<<"\n *************************************************U8 to F32 Gonna copy tensor source buffer*******************************************";
+
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_uint8)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float32)));
         }
@@ -101,11 +111,13 @@ static vx_status VX_CALLBACK refreshBrightness(vx_node node, const vx_reference 
     return status;
 }
 
-static vx_status VX_CALLBACK validateBrightness(vx_node node, const vx_reference parameters[], vx_uint32 num, vx_meta_format metas[])
+static vx_status VX_CALLBACK validateExposure(vx_node node, const vx_reference parameters[], vx_uint32 num, vx_meta_format metas[])
 {
-    std::cerr<<"validate";
     vx_status status = VX_SUCCESS;
     vx_enum scalar_type;
+    STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[4], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
+    if (scalar_type != VX_TYPE_UINT32)
+        return ERRMSG(VX_ERROR_INVALID_TYPE, "validate: Paramter: #4 type=%d (must be size)\n", scalar_type);
     STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[5], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
     if (scalar_type != VX_TYPE_UINT32)
         return ERRMSG(VX_ERROR_INVALID_TYPE, "validate: Paramter: #5 type=%d (must be size)\n", scalar_type);
@@ -114,10 +126,8 @@ static vx_status VX_CALLBACK validateBrightness(vx_node node, const vx_reference
         return ERRMSG(VX_ERROR_INVALID_TYPE, "validate: Paramter: #6 type=%d (must be size)\n", scalar_type);
     STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[7], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
     if (scalar_type != VX_TYPE_UINT32)
-        return ERRMSG(VX_ERROR_INVALID_TYPE, "validate: Paramter: #7 type=%d (must be size)\n", scalar_type);
-    STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[7], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
-    if (scalar_type != VX_TYPE_UINT32)
-        return ERRMSG(VX_ERROR_INVALID_TYPE, "validate: Paramter: #8 type=%d (must be size)\n", scalar_type);
+        return ERRMSG(VX_ERROR_INVALID_TYPE, "validate: Paramter: #6 type=%d (must be size)\n", scalar_type);
+
     // Check for output parameters
     vx_tensor output;
     vx_parameter output_param;
@@ -140,55 +150,79 @@ static vx_status VX_CALLBACK validateBrightness(vx_node node, const vx_reference
     return status;
 }
 
-static vx_status VX_CALLBACK processBrightness(vx_node node, const vx_reference *parameters, vx_uint32 num)
+static vx_status VX_CALLBACK processExposure(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
-    std::cerr<<"process";
     RppStatus rpp_status = RPP_SUCCESS;
     vx_status return_status = VX_SUCCESS;
-    BrightnessLocalData *data = NULL;
+    ExposureLocalData *data = NULL;
     STATUS_ERROR_CHECK(vxQueryNode(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
     if (data->device_type == AGO_TARGET_AFFINITY_GPU)
     {
 #if ENABLE_OPENCL
-        refreshBrightness(node, parameters, num, data);
-        rpp_status = rppt_brightness_gpu((void *)data->cl_pSrc, data->src_desc_ptr, (void *)data->cl_pDst, data->src_desc_ptr,  data->alpha, data->beta, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
+        refreshExposure(node, parameters, num, data);
+        rpp_status = rppt_exposure_gpu((void *)data->cl_pSrc, data->src_desc_ptr, (void *)data->cl_pDst, data->src_desc_ptr,  data->exposure_value, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
 #elif ENABLE_HIP
-        refreshBrightness(node, parameters, num, data);
-        rpp_status = rppt_brightness_gpu((void *)data->hip_pSrc, data->src_desc_ptr, (void *)data->hip_pDst, data->src_desc_ptr,  data->alpha, data->beta, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
+        refreshExposure(node, parameters, num, data);
+        rpp_status = rppt_exposure_gpu((void *)data->hip_pSrc, data->src_desc_ptr, (void *)data->hip_pDst, data->src_desc_ptr,  data->exposure_value, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
 #endif
     }
     if (data->device_type == AGO_TARGET_AFFINITY_CPU)
     {
-        refreshBrightness(node, parameters, num, data);
-        std::cerr<<"batchsize"<<data->nbatchSize;
+        refreshExposure(node, parameters, num, data);
         for(int i = 0; i < data->nbatchSize; i++)
         {
-            std::cerr<<"\n bbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
+                        data->roi_tensor_Ptr[i].xywhROI.roiWidth=600;
+
+            std::cerr<<"\n####################### bbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
         }
-        rpp_status = rppt_brightness_host(data->pSrc, data->src_desc_ptr, data->pDst, data->src_desc_ptr, data->alpha, data->beta, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
+
+// typecasting U8 t0 F32
+    //     unsigned long long ioBufferSize = (unsigned long long)data->src_desc_ptr->h * (unsigned long long)data->src_desc_ptr->w * (unsigned long long)data->src_desc_ptr->c * (unsigned long long)data->src_desc_ptr->n;
+
+    //     float *temp = ((float*)calloc( ioBufferSize,sizeof(float) ));
+    //    if(1)
+    //    { 
+    //             std::cerr<<"NHWC" <<(unsigned long long)data->src_desc_ptr->h << "  "<< (unsigned long long)data->src_desc_ptr->w << "  "<<(unsigned long long)data->src_desc_ptr->c <<"  "<< (unsigned long long)data->src_desc_ptr->n;
+                
+    //             std ::cerr<<"\n ioBufferSize "<<ioBufferSize;
+    //             for (int i=0;i< ioBufferSize;i++)
+    //             {
+    //                 temp[i]=(float)(*(unsigned char*)(data->pSrc));
+    //                 data->pSrc +=1;
+
+    //             }
+    //    }
+
+
+
+        // data->src_desc_ptr->dataType=RpptDataType::F32;   
+        // data->dst_desc_ptr->dataType=RpptDataType::F32;
+        std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ source  datatype      "<<data->src_desc_ptr->dataType;
+        std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ destination datatype      "<<data->src_desc_ptr->dataType;
+        rpp_status = rppt_exposure_host(data->pSrc, data->src_desc_ptr, data->pDst, data->src_desc_ptr, data->exposure_value, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
         std::cerr<<"\n back from RPP";
     }
     return return_status;
 }
 
-static vx_status VX_CALLBACK initializeBrightness(vx_node node, const vx_reference *parameters, vx_uint32 num)
+static vx_status VX_CALLBACK initializeExposure(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
-    BrightnessLocalData *data = new BrightnessLocalData;
-    unsigned layout, roiType;
+    ExposureLocalData *data = new ExposureLocalData;
+    unsigned layout,roiType;
     memset(data, 0, sizeof(*data));
 #if ENABLE_OPENCL
     STATUS_ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_OPENCL_COMMAND_QUEUE, &data->handle.cmdq, sizeof(data->handle.cmdq)));
 #elif ENABLE_HIP
     STATUS_ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hipstream, sizeof(data->handle.hipstream)));
 #endif
-    STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[8], &data->device_type, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    STATUS_ERROR_CHECK(vxReadScalarValue((vx_scalar)parameters[7], &data->nbatchSize));
-    STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[5], &layout, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
+    STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[7], &data->device_type, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
+    STATUS_ERROR_CHECK(vxReadScalarValue((vx_scalar)parameters[6], &data->nbatchSize));
+    STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[4], &layout, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     std::cerr<<"\n layout "<<layout;
-    STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[6], &roiType, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
+    STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[5], &roiType, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     if(roiType == 1)
         data->roiType = RpptRoiType::XYWH;
     else
@@ -197,22 +231,65 @@ static vx_status VX_CALLBACK initializeBrightness(vx_node node, const vx_referen
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_NUMBER_OF_DIMS, &data->src_desc_ptr->numDims, sizeof(data->src_desc_ptr->numDims)));
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_DIMS, &data->in_tensor_dims, sizeof(vx_size) * data->src_desc_ptr->numDims));
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0],VX_TENSOR_DATA_TYPE, &data->in_tensor_type, sizeof(data->in_tensor_type)));
-    data->out_tensor_type = data->in_tensor_type; //for brightness augmentation RPP supports only same datatype 
+    // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2],VX_TENSOR_DATA_TYPE, &data->out_tensor_type, sizeof(data->out_tensor_type)));
+
+    data->out_tensor_type = data->in_tensor_type; //for exposure augmentation RPP supports only same datatype 
     if(data->in_tensor_type == vx_type_e::VX_TYPE_UINT8)
     {
+        std::cerr<<"datatype check UINT8";
+
         data->src_desc_ptr->dataType = RpptDataType::U8;
     }
     else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
     {
+        std::cerr<<"datatype check FLOAT32";
+
         data->src_desc_ptr->dataType = RpptDataType::F32;
     }
     // else if (data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_FLOAT16)
     //     data->src_desc_ptr->dataType = RpptDataType::F16;
     else if (data->in_tensor_type == vx_type_e::VX_TYPE_INT8)
     {
+        std::cerr<<"datatype check INT8";
+
         data->src_desc_ptr->dataType = RpptDataType::I8;
     }
+
+
+    // if(data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_UINT8)
+    //     data->src_desc_ptr->dataType = RpptDataType::U8;
      data->src_desc_ptr->offsetInBytes = 0;
+
+
+    //  data->dst_desc_ptr = &data->dstDesc;
+    // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_NUMBER_OF_DIMS, &data->dst_desc_ptr->numDims, sizeof(data->dst_desc_ptr->numDims)));
+    // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_DIMS, &data->out_tensor_dims, sizeof(vx_size) * data->dst_desc_ptr->numDims));
+    // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2],VX_TENSOR_DATA_TYPE, &data->out_tensor_type, sizeof(data->out_tensor_type)));
+    // if(data->out_tensor_type == vx_type_e::VX_TYPE_UINT8)
+    // {
+    //     data->dst_desc_ptr->dataType= RpptDataType::U8;
+    //      std::cerr<<"dst datatype check UINT8";
+    // }
+    // else if (data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
+    // {
+    //     data->dst_desc_ptr->dataType = RpptDataType::F32;
+    //     std::cerr<<"dst datatype check FLOAT32";
+
+    // }
+    // // else if (data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_FLOAT16)
+    // //     data->src_desc_ptr->dataType = RpptDataType::F16;
+    // else if (data->out_tensor_type == vx_type_e::VX_TYPE_INT8)
+    // {
+    //     std::cerr<<"dst datatype check INT8";
+
+    //     data->dst_desc_ptr->dataType = RpptDataType::I8;
+    // }
+    //  data->dst_desc_ptr->offsetInBytes = 0;
+
+
+    // std::cerr<<"\n INIT4";
+    // std::cerr<<'\nbathcsize'<<data->nbatchSize;
+    //declaring
     if(layout == 0) // NHWC
     {
         data->src_desc_ptr->n = data->in_tensor_dims[0];
@@ -227,6 +304,18 @@ static vx_status VX_CALLBACK initializeBrightness(vx_node node, const vx_referen
         data->src_desc_ptr->layout = RpptLayout::NHWC;
         std::cerr<<"\n Setting layout "<<data->src_desc_ptr->layout;
         std::cerr<<"\n Setting data type "<<data->src_desc_ptr->dataType;
+
+        //destination_description_ptr
+    //     data->dst_desc_ptr->n = data->out_tensor_dims[0];
+    //     data->dst_desc_ptr->h = data->out_tensor_dims[1];
+    //     data->dst_desc_ptr->w = data->out_tensor_dims[2];
+    //     data->dst_desc_ptr->c = data->out_tensor_dims[3];
+    //     std::cerr<<"\n dest n h w c "<<data->dst_desc_ptr->n<<" "<<data->dst_desc_ptr->h<<" "<<data->dst_desc_ptr->w<<" "<<data->dst_desc_ptr->c;
+    //     data->dst_desc_ptr->strides.nStride = data->dst_desc_ptr->c * data->dst_desc_ptr->w * data->dst_desc_ptr->h;
+    //     data->dst_desc_ptr->strides.hStride = data->dst_desc_ptr->c * data->dst_desc_ptr->w;
+    //     data->dst_desc_ptr->strides.wStride = data->dst_desc_ptr->c;
+    //     data->dst_desc_ptr->strides.cStride = 1;
+    //     data->dst_desc_ptr->layout = RpptLayout::NHWC;
     }
     else // NCHW
     {
@@ -234,16 +323,32 @@ static vx_status VX_CALLBACK initializeBrightness(vx_node node, const vx_referen
         data->src_desc_ptr->h = data->in_tensor_dims[2];
         data->src_desc_ptr->w = data->in_tensor_dims[3];
         data->src_desc_ptr->c = data->in_tensor_dims[1];
+        
         data->src_desc_ptr->strides.nStride = data->src_desc_ptr->c * data->src_desc_ptr->w * data->src_desc_ptr->h;
         data->src_desc_ptr->strides.cStride = data->src_desc_ptr->w * data->src_desc_ptr->h;
         data->src_desc_ptr->strides.hStride = data->src_desc_ptr->w;
         data->src_desc_ptr->strides.wStride = 1;
         data->src_desc_ptr->layout = RpptLayout::NCHW;
+
+        // data->dst_desc_ptr->n = data->out_tensor_dims[0];
+        // data->dst_desc_ptr->h = data->out_tensor_dims[2];
+        // data->dst_desc_ptr->w = data->out_tensor_dims[3];
+        // data->dst_desc_ptr->c = data->out_tensor_dims[1];
+        // std::cerr<<"\ndest n h w c "<<data->dst_desc_ptr->n<<" "<<data->dst_desc_ptr->h<<" "<<data->dst_desc_ptr->w<<" "<<data->dst_desc_ptr->c;
+        // data->dst_desc_ptr->strides.nStride = data->dst_desc_ptr->c * data->dst_desc_ptr->w * data->dst_desc_ptr->h;
+        // data->dst_desc_ptr->strides.cStride = data->dst_desc_ptr->w * data->dst_desc_ptr->h;
+        // data->dst_desc_ptr->strides.hStride = data->dst_desc_ptr->w;
+        // data->dst_desc_ptr->strides.wStride = 1;
+        // data->dst_desc_ptr->layout = RpptLayout::NHWC;
     }
+        
+    // data->dst_desc_ptr = data->src_desc_ptr;
+
     data->roi_tensor_Ptr = (RpptROI *) calloc(data->nbatchSize, sizeof(RpptROI));
-    data->alpha = (vx_float32 *)malloc(sizeof(vx_float32) * data->nbatchSize);
-    data->beta = (vx_float32 *)malloc(sizeof(vx_float32) * data->nbatchSize);
-    refreshBrightness(node, parameters, num, data);
+    data->exposure_value = (vx_float32 *)malloc(sizeof(vx_float32) * data->nbatchSize);
+    // data->src_desc_ptr->dataType=RpptDataType::F32;   
+    // data->dst_desc_ptr->dataType=RpptDataType::F32;
+    refreshExposure(node, parameters, num, data);
 #if ENABLE_OPENCL
     if (data->device_type == AGO_TARGET_AFFINITY_GPU)
         rppCreateWithStreamAndBatchSize(&data->rppHandle, data->handle.cmdq, data->nbatchSize);
@@ -258,9 +363,9 @@ static vx_status VX_CALLBACK initializeBrightness(vx_node node, const vx_referen
     return VX_SUCCESS;
 }
 
-static vx_status VX_CALLBACK uninitializeBrightness(vx_node node, const vx_reference *parameters, vx_uint32 num)
+static vx_status VX_CALLBACK uninitializeExposure(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
-    BrightnessLocalData *data;
+    ExposureLocalData *data;
     STATUS_ERROR_CHECK(vxQueryNode(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
 #if ENABLE_OPENCL || ENABLE_HIP
     if (data->device_type == AGO_TARGET_AFFINITY_GPU)
@@ -269,8 +374,7 @@ static vx_status VX_CALLBACK uninitializeBrightness(vx_node node, const vx_refer
     if (data->device_type == AGO_TARGET_AFFINITY_CPU)
         rppDestroyHost(data->rppHandle);
     free(data->roi_tensor_Ptr);
-    free(data->alpha);
-    free(data->beta);
+    free(data->exposure_value);
     delete (data);
     return VX_SUCCESS;
 }
@@ -294,20 +398,21 @@ static vx_status VX_CALLBACK query_target_support(vx_graph graph, vx_node node,
 #if ENABLE_OPENCL
     supported_target_affinity = AGO_TARGET_AFFINITY_CPU;
 #endif
+
     return VX_SUCCESS;
 }
 
-vx_status Brightness_Register(vx_context context)
+vx_status Exposure_Register(vx_context context)
 {
     vx_status status = VX_SUCCESS;
     // Add kernel to the context with callbacks
-    vx_kernel kernel = vxAddUserKernel(context, "org.rpp.Brightness",
-                                       VX_KERNEL_RPP_BRIGHTNESS,
-                                       processBrightness,
-                                       9,
-                                       validateBrightness,
-                                       initializeBrightness,
-                                       uninitializeBrightness);
+    vx_kernel kernel = vxAddUserKernel(context, "org.rpp.Exposure",
+                                       VX_KERNEL_RPP_EXPOSURE,
+                                       processExposure,
+                                       8,
+                                       validateExposure,
+                                       initializeExposure,
+                                       uninitializeExposure);
     ERROR_CHECK_OBJECT(kernel);
     AgoTargetAffinityInfo affinity;
     vxQueryContext(context, VX_CONTEXT_ATTRIBUTE_AMD_AFFINITY, &affinity, sizeof(affinity));
@@ -320,20 +425,20 @@ vx_status Brightness_Register(vx_context context)
     vx_bool enableBufferAccess = vx_false_e;
 #endif
     amd_kernel_query_target_support_f query_target_support_f = query_target_support;
-
     if (kernel)
     {
         STATUS_ERROR_CHECK(vxSetKernelAttribute(kernel, VX_KERNEL_ATTRIBUTE_AMD_QUERY_TARGET_SUPPORT, &query_target_support_f, sizeof(query_target_support_f)));
+       
         PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 0, VX_INPUT, VX_TYPE_TENSOR, VX_PARAMETER_STATE_REQUIRED));
         PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 1, VX_INPUT, VX_TYPE_ARRAY, VX_PARAMETER_STATE_REQUIRED));
         PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 2, VX_OUTPUT, VX_TYPE_TENSOR, VX_PARAMETER_STATE_REQUIRED));
         PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 3, VX_INPUT, VX_TYPE_ARRAY, VX_PARAMETER_STATE_REQUIRED));
-        PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 4, VX_INPUT, VX_TYPE_ARRAY, VX_PARAMETER_STATE_REQUIRED));
+        PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 4, VX_INPUT, VX_TYPE_SCALAR, VX_PARAMETER_STATE_REQUIRED));
         PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 5, VX_INPUT, VX_TYPE_SCALAR, VX_PARAMETER_STATE_REQUIRED));
         PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 6, VX_INPUT, VX_TYPE_SCALAR, VX_PARAMETER_STATE_REQUIRED));
         PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 7, VX_INPUT, VX_TYPE_SCALAR, VX_PARAMETER_STATE_REQUIRED));
-        PARAM_ERROR_CHECK(vxAddParameterToKernel(kernel, 8, VX_INPUT, VX_TYPE_SCALAR, VX_PARAMETER_STATE_REQUIRED));
         PARAM_ERROR_CHECK(vxFinalizeKernel(kernel));
+        
     }
     if (status != VX_SUCCESS)
     {

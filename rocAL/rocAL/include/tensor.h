@@ -95,7 +95,6 @@ struct rocALTensorInfo
         _layout = layout;
     }
     void set_color_format(RocalColorFormat color_format) { _color_format = color_format; }
-    // void set _data_type(Rocal)
 
     unsigned num_of_dims() const { return _num_of_dims; }
     unsigned batch_size() const { return _batch_size; }

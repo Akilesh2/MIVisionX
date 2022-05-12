@@ -21,26 +21,42 @@ THE SOFTWARE.
 */
 
 #pragma once
-#include "parameter_crop.h"
+#include "node.h"
+#include "parameter_factory.h"
+#include "parameter_vx.h"
+#include "graph.h"
 
-class RocalCropParam : public CropParam
+class ExposureTensorNode : public TensorNode
 {
 public:
-    RocalCropParam() = delete;
-    RocalCropParam(unsigned int batch_size): CropParam(batch_size)
-    {
-        crop_height_factor = default_crop_height_factor();
-        crop_width_factor  = default_crop_width_factor();
-    }
-    unsigned int  crop_w, crop_h, crop_d;
-    void set_crop_height_factor(Parameter<float>* crop_h_factor);
-    void set_crop_width_factor(Parameter<float>*  crop_w_factor);
-    void update_array() override;
+    ExposureTensorNode(const std::vector<rocALTensor *> &inputs, const std::vector<rocALTensor *> &outputs);
+    ExposureTensorNode() = delete;
+
+    void init( float shift);
+    void init( FloatParam* shift);
+
+protected:
+    void create_node() override ;
+    void update_node() override;
 private:
-    constexpr static float CROP_HEIGHT_FACTOR_RANGE[2]  = {0.55, 0.95};
-    constexpr static float CROP_WIDTH_FACTOR_RANGE[2]   = {0.55, 0.95};
-    Parameter<float>* default_crop_height_factor();
-    Parameter<float>* default_crop_width_factor();
-    Parameter<float> *crop_height_factor, *crop_width_factor;
-    void fill_crop_dims() override;
+
+    ParameterVX<float> _shift;
+    unsigned _layout, _roi_type;
+    constexpr static float SHIFT_RANGE [2] = {0.15, 0.95};
+
 };
+// class ExposureNode : public Node
+// {
+// public:
+//     ExposureNode(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs);
+//     ExposureNode() = delete;
+//     void init(float shift);
+//     void init(FloatParam *shift);
+
+// protected:
+//     void update_node() override;
+//     void create_node() override;
+// private:
+//     ParameterVX<float> _shift;
+//     constexpr static float SHIFT_RANGE [2] = {0.15, 0.95};
+// };

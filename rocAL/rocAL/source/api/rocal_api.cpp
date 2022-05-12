@@ -45,7 +45,6 @@ rocalCreate(
         RocalTensorOutputType output_tensor_data_type)
 {
     RocalContext context = nullptr;
-    std::cerr<<"In rocal_api.cpp  "<< batch_size;
     try
     {
         auto translate_process_mode = [](RocalProcessMode process_mode)

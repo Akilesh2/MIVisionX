@@ -39,7 +39,6 @@ void CropMirrorNormalizeTensorNode::create_node()
 
     if(_crop_param->crop_h == 0 || _crop_param->crop_w == 0)
         THROW("Uninitialized destination dimension - Invalid Crop Sizes")
-    std::cerr<<"bbbbb_batch_size  "<<_batch_size<<"\n";
     _crop_param->create_array(_graph);
     _mean_vx.resize(_batch_size);
     _std_dev_vx.resize(_batch_size);
@@ -88,29 +87,18 @@ void CropMirrorNormalizeTensorNode::create_node()
 
 void CropMirrorNormalizeTensorNode::update_node()
 {
-        std::cerr<<"CropMirrorNormalizeTensorNode::update_node width  height "<<_crop_param->crop_w<<" "<<_crop_param->crop_h;
-
     _crop_param->set_image_dimensions(_inputs[0]->info().get_roi());
 
-    std::cerr<< "\n$$$$$$$$$$$$$$$$$$$$$" <<_inputs[0]->info().get_roi()[0].x2<<" "<<_inputs[0]->info().get_roi()[0].y2<<" ";
     _crop_param->update_array();
-    std::cerr<<"CropMirrorNormalizeTensorNode::update_node width  height after"<<_crop_param->crop_w<<" "<<_crop_param->crop_h;
-
     std::vector<uint32_t> crop_h_dims, crop_w_dims;
     _crop_param->get_crop_dimensions(crop_w_dims, crop_h_dims);
-    std::cerr<<"\nCropMirrorNormalizeTensorNode::update_node() "<<crop_w_dims[0];
     _outputs[0]->update_tensor_roi(crop_w_dims, crop_h_dims);
     _mirror.update_array();
-    std::cerr<<"\n In CropMirrorNormalizeTensorNode::update_node()";
-    for(int i = 0; i < _batch_size; i++)
-    {
-        std::cerr<<"\n W:  "<<crop_w_dims[i]<<" "<<" H: "<<crop_h_dims[i];
-    }
+    
 }
 
 void CropMirrorNormalizeTensorNode::init(int crop_h, int crop_w, float start_x, float start_y, float mean, float std_dev, IntParam *mirror)
 {
-    std::cerr<<"CropMirrorNormalizeTensorNode::init "<<crop_w<<" "<<crop_h;
     _crop_param->crop_h = crop_h;
     _crop_param->crop_w = crop_w;
     _mean   = mean;

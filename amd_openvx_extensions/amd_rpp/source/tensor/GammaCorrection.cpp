@@ -34,10 +34,16 @@ struct GammaCorrectionLocalData
     vx_float32 *gamma;
     vx_size channels;
     RpptDescPtr src_desc_ptr;
+    // RpptDescPtr dst_desc_ptr;
+
     RpptDesc srcDesc;
+    RpptDesc dstDesc;
+
     RpptROI *roi_tensor_Ptr;
     RpptRoiType roiType;
     size_t in_tensor_dims[NUM_OF_DIMS]; // will have NHWC info
+    size_t out_tensor_dims[NUM_OF_DIMS];
+
     vx_enum in_tensor_type ;
     vx_enum out_tensor_type; // will have NHWC info
 #if ENABLE_OPENCL
@@ -51,6 +57,7 @@ struct GammaCorrectionLocalData
 
 static vx_status VX_CALLBACK refreshGammaCorrection(vx_node node, const vx_reference *parameters, vx_uint32 num, GammaCorrectionLocalData *data)
 {
+
     vx_status status = VX_SUCCESS;
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[1], 0, data->nbatchSize *4, sizeof(unsigned),data->roi_tensor_Ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[3], 0, data->nbatchSize, sizeof(vx_float32), data->gamma, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
@@ -70,10 +77,12 @@ static vx_status VX_CALLBACK refreshGammaCorrection(vx_node node, const vx_refer
         // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_uint8)));
         if (data->in_tensor_type == vx_type_e::VX_TYPE_UINT8 && data->out_tensor_type == vx_type_e::VX_TYPE_UINT8)
         {
+            std::cerr<<"\n ************************************************* U8 to U8 Gonna copy tensor source buffer*******************************************";
+
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_uint8)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_uint8)));
         }
-        else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
+        else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
         {
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_float32)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float32)));
@@ -87,11 +96,14 @@ static vx_status VX_CALLBACK refreshGammaCorrection(vx_node node, const vx_refer
         // }
         else if (data->in_tensor_type == vx_type_e::VX_TYPE_INT8 && data->out_tensor_type == vx_type_e::VX_TYPE_INT8)
         {
+
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_int8)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_int8)));
         }
         else if (data->in_tensor_type == vx_type_e::VX_TYPE_UINT8 && data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
         {
+            std::cerr<<"\n *************************************************U8 to F32 Gonna copy tensor source buffer*******************************************";
+
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_uint8)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float32)));
         }
@@ -165,8 +177,30 @@ static vx_status VX_CALLBACK processGammaCorrection(vx_node node, const vx_refer
 
             std::cerr<<"\n####################### bbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
         }
-        std::cerr<<"\nDatatype  "<<data->in_tensor_type;
 
+// typecasting U8 t0 F32
+        unsigned long long ioBufferSize = (unsigned long long)data->src_desc_ptr->h * (unsigned long long)data->src_desc_ptr->w * (unsigned long long)data->src_desc_ptr->c * (unsigned long long)data->src_desc_ptr->n;
+
+        float *temp = ((float*)calloc( ioBufferSize,sizeof(float) ));
+       if(0)
+       { 
+                std::cerr<<"NHWC" <<(unsigned long long)data->src_desc_ptr->h << "  "<< (unsigned long long)data->src_desc_ptr->w << "  "<<(unsigned long long)data->src_desc_ptr->c <<"  "<< (unsigned long long)data->src_desc_ptr->n;
+                
+                std ::cerr<<"\n ioBufferSize "<<ioBufferSize;
+                for (int i=0;i< ioBufferSize;i++)
+                {
+                    temp[i]=(float)(*(unsigned char*)(data->pSrc));
+                    data->pSrc +=1;
+
+                }
+       }
+
+
+
+        // data->src_desc_ptr->dataType=RpptDataType::F32;   
+        // data->dst_desc_ptr->dataType=RpptDataType::F32;
+        std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ source  datatype      "<<data->src_desc_ptr->dataType;
+        std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ destination datatype      "<<data->src_desc_ptr->dataType;
         rpp_status = rppt_gamma_correction_host(data->pSrc, data->src_desc_ptr, data->pDst, data->src_desc_ptr, data->gamma, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
         std::cerr<<"\n back from RPP";
@@ -197,25 +231,65 @@ static vx_status VX_CALLBACK initializeGammaCorrection(vx_node node, const vx_re
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_NUMBER_OF_DIMS, &data->src_desc_ptr->numDims, sizeof(data->src_desc_ptr->numDims)));
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_DIMS, &data->in_tensor_dims, sizeof(vx_size) * data->src_desc_ptr->numDims));
     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0],VX_TENSOR_DATA_TYPE, &data->in_tensor_type, sizeof(data->in_tensor_type)));
+    // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2],VX_TENSOR_DATA_TYPE, &data->out_tensor_type, sizeof(data->out_tensor_type)));
+
     data->out_tensor_type = data->in_tensor_type; //for gamma_correction augmentation RPP supports only same datatype 
     if(data->in_tensor_type == vx_type_e::VX_TYPE_UINT8)
     {
+        std::cerr<<"datatype check UINT8";
+
         data->src_desc_ptr->dataType = RpptDataType::U8;
     }
     else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
     {
+        std::cerr<<"datatype check FLOAT32";
+
         data->src_desc_ptr->dataType = RpptDataType::F32;
     }
     // else if (data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_FLOAT16)
     //     data->src_desc_ptr->dataType = RpptDataType::F16;
     else if (data->in_tensor_type == vx_type_e::VX_TYPE_INT8)
     {
+        std::cerr<<"datatype check INT8";
+
         data->src_desc_ptr->dataType = RpptDataType::I8;
     }
 
-    if(data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_UINT8)
-        data->src_desc_ptr->dataType = RpptDataType::U8;
+
+    // if(data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_UINT8)
+    //     data->src_desc_ptr->dataType = RpptDataType::U8;
      data->src_desc_ptr->offsetInBytes = 0;
+
+
+    //  data->dst_desc_ptr = &data->dstDesc;
+    // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_NUMBER_OF_DIMS, &data->dst_desc_ptr->numDims, sizeof(data->dst_desc_ptr->numDims)));
+    // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_DIMS, &data->out_tensor_dims, sizeof(vx_size) * data->dst_desc_ptr->numDims));
+    // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2],VX_TENSOR_DATA_TYPE, &data->out_tensor_type, sizeof(data->out_tensor_type)));
+    // if(data->out_tensor_type == vx_type_e::VX_TYPE_UINT8)
+    // {
+    //     data->dst_desc_ptr->dataType= RpptDataType::U8;
+    //      std::cerr<<"dst datatype check UINT8";
+    // }
+    // else if (data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
+    // {
+    //     data->dst_desc_ptr->dataType = RpptDataType::F32;
+    //     std::cerr<<"dst datatype check FLOAT32";
+
+    // }
+    // // else if (data->src_desc_ptr->dataType == vx_type_e::VX_TYPE_FLOAT16)
+    // //     data->src_desc_ptr->dataType = RpptDataType::F16;
+    // else if (data->out_tensor_type == vx_type_e::VX_TYPE_INT8)
+    // {
+    //     std::cerr<<"dst datatype check INT8";
+
+    //     data->dst_desc_ptr->dataType = RpptDataType::I8;
+    // }
+    //  data->dst_desc_ptr->offsetInBytes = 0;
+
+    
+    // std::cerr<<"\n INIT4";
+    // std::cerr<<'\nbathcsize'<<data->nbatchSize;
+    //declaring
     if(layout == 0) // NHWC
     {
         data->src_desc_ptr->n = data->in_tensor_dims[0];
@@ -230,6 +304,18 @@ static vx_status VX_CALLBACK initializeGammaCorrection(vx_node node, const vx_re
         data->src_desc_ptr->layout = RpptLayout::NHWC;
         std::cerr<<"\n Setting layout "<<data->src_desc_ptr->layout;
         std::cerr<<"\n Setting data type "<<data->src_desc_ptr->dataType;
+
+        //destination_description_ptr
+        // data->dst_desc_ptr->n = data->out_tensor_dims[0];
+        // data->dst_desc_ptr->h = data->out_tensor_dims[1];
+        // data->dst_desc_ptr->w = data->out_tensor_dims[2];
+        // data->dst_desc_ptr->c = data->out_tensor_dims[3];
+        // std::cerr<<"\n dest n h w c "<<data->dst_desc_ptr->n<<" "<<data->dst_desc_ptr->h<<" "<<data->dst_desc_ptr->w<<" "<<data->dst_desc_ptr->c;
+        // data->dst_desc_ptr->strides.nStride = data->dst_desc_ptr->c * data->dst_desc_ptr->w * data->dst_desc_ptr->h;
+        // data->dst_desc_ptr->strides.hStride = data->dst_desc_ptr->c * data->dst_desc_ptr->w;
+        // data->dst_desc_ptr->strides.wStride = data->dst_desc_ptr->c;
+        // data->dst_desc_ptr->strides.cStride = 1;
+        // data->dst_desc_ptr->layout = RpptLayout::NHWC;
     }
     else // NCHW
     {
@@ -243,9 +329,25 @@ static vx_status VX_CALLBACK initializeGammaCorrection(vx_node node, const vx_re
         data->src_desc_ptr->strides.hStride = data->src_desc_ptr->w;
         data->src_desc_ptr->strides.wStride = 1;
         data->src_desc_ptr->layout = RpptLayout::NCHW;
+
+        // data->dst_desc_ptr->n = data->out_tensor_dims[0];
+        // data->dst_desc_ptr->h = data->out_tensor_dims[2];
+        // data->dst_desc_ptr->w = data->out_tensor_dims[3];
+        // data->dst_desc_ptr->c = data->out_tensor_dims[1];
+        // std::cerr<<"\ndest n h w c "<<data->dst_desc_ptr->n<<" "<<data->dst_desc_ptr->h<<" "<<data->dst_desc_ptr->w<<" "<<data->dst_desc_ptr->c;
+        // data->dst_desc_ptr->strides.nStride = data->dst_desc_ptr->c * data->dst_desc_ptr->w * data->dst_desc_ptr->h;
+        // data->dst_desc_ptr->strides.cStride = data->dst_desc_ptr->w * data->dst_desc_ptr->h;
+        // data->dst_desc_ptr->strides.hStride = data->dst_desc_ptr->w;
+        // data->dst_desc_ptr->strides.wStride = 1;
+        // data->dst_desc_ptr->layout = RpptLayout::NHWC;
     }
+        
+    // data->dst_desc_ptr = data->src_desc_ptr;
+
     data->roi_tensor_Ptr = (RpptROI *) calloc(data->nbatchSize, sizeof(RpptROI));
     data->gamma = (vx_float32 *)malloc(sizeof(vx_float32) * data->nbatchSize);
+    // data->src_desc_ptr->dataType=RpptDataType::F32;   
+    // data->dst_desc_ptr->dataType=RpptDataType::F32;
     refreshGammaCorrection(node, parameters, num, data);
 #if ENABLE_OPENCL
     if (data->device_type == AGO_TARGET_AFFINITY_GPU)
@@ -307,7 +409,7 @@ vx_status GammaCorrection_Register(vx_context context)
     vx_kernel kernel = vxAddUserKernel(context, "org.rpp.GammaCorrection",
                                        VX_KERNEL_RPP_GAMMACORRECTION,
                                        processGammaCorrection,
-                                       7,
+                                       8,
                                        validateGammaCorrection,
                                        initializeGammaCorrection,
                                        uninitializeGammaCorrection);

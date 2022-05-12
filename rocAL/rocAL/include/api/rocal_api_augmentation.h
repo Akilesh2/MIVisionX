@@ -69,6 +69,8 @@ extern "C" RocalTensor ROCAL_API_CALL rocalGamma(RocalContext context, RocalTens
 extern "C" RocalTensor ROCAL_API_CALL rocalGammaTensor(RocalContext context, RocalTensor input,RocalTensorLayout rocal_tensor_layout,RocalTensorOutputType rocal_tensor_output_type, bool is_output,
                                                    RocalFloatParam alpha = NULL);
 
+extern "C" RocalTensor ROCAL_API_CALL rocalExposureTensor(RocalContext context, RocalTensor input,RocalTensorLayout rocal_tensor_layout,RocalTensorOutputType rocal_tensor_output_type, bool is_output,
+                                                   RocalFloatParam alpha = NULL);
 
 
 /// Accepts U8 and RGB24 inputs

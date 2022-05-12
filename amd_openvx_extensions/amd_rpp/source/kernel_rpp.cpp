@@ -1871,6 +1871,33 @@ VX_API_ENTRY vx_node VX_API_CALL vxExtrppNode_GammaCorrection(vx_graph graph, vx
     }
     return node;
 }
+// Exposure
+VX_API_ENTRY vx_node VX_API_CALL vxExtrppNode_Exposure(vx_graph graph, vx_tensor pSrc,vx_array srcROI, vx_tensor pDst, vx_array exposure,vx_scalar layout, vx_scalar roiType, vx_uint32 nbatchSize)
+{
+    vx_node node = NULL;
+    vx_context context = vxGetContext((vx_reference)graph);
+    if (vxGetStatus((vx_reference)context) == VX_SUCCESS)
+    {
+        vx_uint32 dev_type = getGraphAffinity(graph);
+        vx_scalar DEV_TYPE = vxCreateScalar(vxGetContext((vx_reference)graph), VX_TYPE_UINT32, &dev_type);
+        vx_scalar NBATCHSIZE = vxCreateScalar(vxGetContext((vx_reference)graph), VX_TYPE_UINT32, &nbatchSize);
+        vx_reference params[] = {
+            (vx_reference)pSrc,
+            (vx_reference)srcROI,
+            // (vx_reference)srcImgHeight,
+            (vx_reference)pDst,
+            (vx_reference)exposure,
+             (vx_reference)layout,
+            (vx_reference)roiType,
+            (vx_reference)NBATCHSIZE,
+            (vx_reference)DEV_TYPE};
+        node = createNode(graph, VX_KERNEL_RPP_EXPOSURE, params, 8);
+    }
+    return node;
+}
+
+
+
 
 // VX_API_ENTRY vx_node VX_API_CALL vxExtrppNode_CropMirrorNormalize(vx_graph graph, vx_tensor pSrc, vx_array srcImgWidth, vx_array srcImgHeight, vx_tensor pDst, vx_array dstImgWidth, vx_array dstImgHeight, vx_array x1, vx_array y1, vx_array mean, vx_array std_dev, vx_array flip, vx_scalar is_packed, vx_scalar chnShift, vx_uint32 nbatchSize)
 // {
@@ -1910,16 +1937,11 @@ VX_API_ENTRY vx_node VX_API_CALL vxExtrppNode_CropMirrorNormalize(vx_graph graph
     {
         vx_uint32 dev_type = getGraphAffinity(graph);
         vx_scalar DEV_TYPE = vxCreateScalar(vxGetContext((vx_reference)graph), VX_TYPE_UINT32, &dev_type);
-        std::cerr<<" In vxExtrppNode_CropMirrorNormalize "<< nbatchSize;
         vx_scalar NBATCHSIZE = vxCreateScalar(vxGetContext((vx_reference)graph), VX_TYPE_UINT32, &nbatchSize);
         vx_reference params[] = {
             (vx_reference)pSrc,
-            // (vx_reference)srcImgWidth,
-            // (vx_reference)srcImgHeight,
             (vx_reference)srcROI,
             (vx_reference)pDst,
-            // (vx_reference)dstImgWidth,
-            // (vx_reference)dstImgHeight,
             (vx_reference)dstROI,
             (vx_reference)crop_w,
             (vx_reference)crop_h,
@@ -1985,6 +2007,8 @@ vx_node createNode(vx_graph graph, vx_enum kernelEnum, vx_reference params[], vx
         return NULL;
     }
     vx_kernel kernel = vxGetKernelByEnum(context, kernelEnum);
+        std::cerr<<"kernelEnum "<<kernelEnum<<"\n";
+
     if (vxGetStatus((vx_reference)kernel) == VX_SUCCESS)
     {
         node = vxCreateGenericNode(graph, kernel);
@@ -2017,7 +2041,7 @@ vx_node createNode(vx_graph graph, vx_enum kernelEnum, vx_reference params[], vx
     }
     else
     {
-        vxAddLogEntry((vx_reference)graph, VX_ERROR_INVALID_PARAMETERS, "createNode: failed to retrieve kernel enum %d\n", kernelEnum);
+        vxAddLogEntry((vx_reference)graph, VX_ERROR_INVALID_PARAMETERS, "createNode: ffailed to retrieve kernel enum %d\n", kernelEnum);
         status = VX_ERROR_NOT_SUPPORTED;
     }
     return node;

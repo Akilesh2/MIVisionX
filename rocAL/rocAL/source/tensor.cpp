@@ -159,7 +159,6 @@ void rocALTensor::update_tensor_roi(const std::vector<uint32_t> &width, const st
         if (width.size() != info().batch_size())
             THROW("The batch size of actual Tensor height and width different from Tensor batch size " + TOSTR(width.size()) + " != " + TOSTR(info().batch_size()))
 
-        std::cerr<<"\n  before rocALTensor::update_tensor_roi :: "<<_info.get_roi()[0].x1<<" "<<_info.get_roi()[0].y1<<" "<<_info.get_roi()[0].x2<<" "<<_info.get_roi()[0].y2;
         for (unsigned i = 0; i < info().batch_size(); i++)
         {
             if (width[i] > _info.max_width())
@@ -184,8 +183,6 @@ void rocALTensor::update_tensor_roi(const std::vector<uint32_t> &width, const st
 
             }
         }
-        static int i=0;
-        std::cerr<<"\n"<<"After  rocALTensor::update_tensor_roi :: "<<_info.get_roi()[0].x1<<" "<<_info.get_roi()[0].y1<<" "<<_info.get_roi()[0].x2 <<" "<<_info.get_roi()[0].y2<<"\n";
     }
 }
 
@@ -487,7 +484,6 @@ TensorInfo::TensorInfo(
 {
     vx_size pix_size = tensor_data_size(data_type);
     unsigned alignpixels = TENSOR_WIDTH_ALIGNMENT;
-    std::cerr<<"################ TensorInfo :: "<<_width <<" "<<_height<<"\n";
     if (alignpixels == 0)
         _stride = width_ * pix_size;
     else

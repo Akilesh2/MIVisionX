@@ -677,6 +677,7 @@ AgoKernel * agoFindKernelByEnum(AgoContext * acontext, vx_enum kernel_id)
 {
     // search context
     for (AgoKernel * kernel = acontext->kernelList.head; kernel; kernel = kernel->next) {
+        // printf("kernel->id  %d \t kernel_id  %d ",kernel->id,kernel_id);
         if (kernel->id == kernel_id) return kernel;
     }
     return 0;

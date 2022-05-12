@@ -177,7 +177,6 @@ void CircularBuffer::pop()
 }
 void CircularBuffer::init(RocalMemType output_mem_type, size_t output_mem_size, size_t buffer_depth)
 {
-    // std::cerr<<"\n Coming to initialize circular buffer output_mem_size :: "<<output_mem_size*10<<"\t buffer_depth :: "<<buffer_depth;
     _buff_depth = buffer_depth;
     _dev_buffer.reserve(_buff_depth);
     _host_buffer_ptrs.reserve(_buff_depth);

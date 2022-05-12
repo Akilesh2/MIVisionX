@@ -133,6 +133,7 @@ list(APPEND SOURCES
         source/tensor/Copy.cpp
         source/tensor/CropMirrorNormalize.cpp
         source/tensor/GammaCorrection.cpp
+        source/tensor/Exposure.cpp
         source/tensor/Nop.cpp
         source/kernel_rpp.cpp
         source/internal_publishKernels.cpp
