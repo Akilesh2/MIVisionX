@@ -124,7 +124,7 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
 
     RocalTensor input1;
     RocalTensorLayout tensorLayout = RocalTensorLayout::ROCAL_NCHW;
-    RocalTensorOutputType tensorOutputType = RocalTensorOutputType::ROCAL_UINT8;
+    RocalTensorOutputType tensorOutputType = RocalTensorOutputType::ROCAL_FP32;
 
     // The jpeg file loader can automatically select the best size to decode all images to that size
     // User can alternatively set the size or change the policy that is used to automatically find the size
@@ -164,13 +164,16 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
                   << " Crop Mirror Normalize Tensor" << std::endl;
         std::cerr<<"In unit_Test batchsize "<< inputBatchSize<<"\n";
         image1 = rocalCropMirrorNormalizeTensor(handle, input1, tensorLayout, tensorOutputType, 3, resize_w, resize_h, 10, 10, 0, mean, sdev, true);
+
     }
     break;
     case 1:
     {
+        std::vector<float> mean{0, 0, 0};
+        std::vector<float> sdev{1, 1, 1};
         std::cout << ">>>>>>> Running "
                   << "rocalBrightness" << std::endl;
-        image1 = rocalBrightnessTensor(handle, input1, tensorLayout, tensorOutputType, true);
+        image1 = rocalBrightnessTensor(handle, image1, tensorLayout, tensorOutputType, true);
     }
     break;
     case 2:

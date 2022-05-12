@@ -533,6 +533,7 @@ MasterGraph::copy_output(
 MasterGraph::Status
 MasterGraph::copy_output(void *out_ptr)
 {
+    std::cerr<<"Inside Copy Output";
     if(no_more_processed_data())
         return MasterGraph::Status::NO_MORE_DATA;
 

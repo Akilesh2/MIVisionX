@@ -142,7 +142,11 @@ rocalGammaTensor(
             default:
                 THROW("Unsupported Tensor output type" + TOSTR(rocal_tensor_output_type))
         }
+        rocALTensorInfo output_info = input->info();
+
         output = context->master_graph->create_tensor(input->info(), is_output);
+        output->reset_tensor_roi();
+
 
         context->master_graph->add_node<GammaTensorNode>({input}, {output})->init(alpha);
     }

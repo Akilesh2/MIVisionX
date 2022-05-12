@@ -75,6 +75,7 @@ static vx_status VX_CALLBACK refreshGammaCorrection(vx_node node, const vx_refer
         }
         else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
         {
+            std::cerr<<"*******************FLOAT32*******************";
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_float32)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float32)));
         }
@@ -101,6 +102,7 @@ static vx_status VX_CALLBACK refreshGammaCorrection(vx_node node, const vx_refer
 
 static vx_status VX_CALLBACK validateGammaCorrection(vx_node node, const vx_reference parameters[], vx_uint32 num, vx_meta_format metas[])
 {
+    std::cerr<<"GAMMA";
     vx_status status = VX_SUCCESS;
     vx_enum scalar_type;
     STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[4], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
@@ -161,15 +163,33 @@ static vx_status VX_CALLBACK processGammaCorrection(vx_node node, const vx_refer
         refreshGammaCorrection(node, parameters, num, data);
         for(int i = 0; i < data->nbatchSize; i++)
         {
-                        data->roi_tensor_Ptr[i].xywhROI.roiWidth=600;
 
-            std::cerr<<"\n####################### bbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
+            std::cerr<<"\nbbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
         }
-        std::cerr<<"\nDatatype  "<<data->in_tensor_type;
+        std::cerr<<"\nDatatype  "<<data->in_tensor_type<<" \n"<<"gamma";
+        std::cerr<<"before gamma rpp call\n";
+        float *temp = ((float*)calloc( 100,sizeof(float) ));
 
+        for (int i=0;i< 100;i++)
+                {
+                    temp[i]=*((float *)(data->pSrc) + i);
+                    // *((float *)(data->pSrc) + i)=*((float *)(data->) + i)*255;
+                    std::cout<<temp[i]<<" ";
+
+                }
+            
         rpp_status = rppt_gamma_correction_host(data->pSrc, data->src_desc_ptr, data->pDst, data->src_desc_ptr, data->gamma, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
         std::cerr<<"\n back from RPP";
+                // float *temp = ((float*)calloc( 100,sizeof(float) ));
+        std::cerr<<"After gamma rpp call \n";
+        for (int i=0;i< 100;i++)
+                {
+                    temp[i]=(*((float *)(data->pDst) + i));
+                    // *((float *)(data->pDst) + i)=*((float *)(data->pDst) + i)*255;
+                    std::cout<<temp[i]<<" ";
+
+                }
     }
     return return_status;
 }
