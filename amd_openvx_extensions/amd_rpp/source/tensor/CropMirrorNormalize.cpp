@@ -589,7 +589,7 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
         unsigned long long ioBufferSize = (unsigned long long)data->src_desc_ptr->h * (unsigned long long)data->src_desc_ptr->w * (unsigned long long)data->src_desc_ptr->c * (unsigned long long)data->src_desc_ptr->n;
 
         float *temp = ((float*)calloc( ioBufferSize,sizeof(float) ));
-       if(0)
+       if(1)
        { 
                 std::cerr<<"NHWC" <<(unsigned long long)data->src_desc_ptr->h << "  "<< (unsigned long long)data->src_desc_ptr->w << "  "<<(unsigned long long)data->src_desc_ptr->c <<"  "<< (unsigned long long)data->src_desc_ptr->n;
                 
@@ -604,13 +604,13 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
 
 
         std::cerr<<"\n Gonna call RPP";
-        // data->src_desc_ptr->dataType=RpptDataType::F32;   
-        // data->dst_desc_ptr->dataType=RpptDataType::F32;
+        data->src_desc_ptr->dataType=RpptDataType::F32;   
+        data->dst_desc_ptr->dataType=RpptDataType::F32;
         std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ source  datatype      "<<data->src_desc_ptr->dataType;
         std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ destination datatype      "<<data->src_desc_ptr->dataType;
 
         
-        rpp_status = rppt_crop_mirror_normalize_host(data->pSrc , data->src_desc_ptr,
+        rpp_status = rppt_crop_mirror_normalize_host(temp , data->src_desc_ptr,
                                                 data->pDst, data->dst_desc_ptr,
                                                  data->mean,data->std_dev,
                                                  data->mirror, data->roi_tensor_Ptr,data->roiType,
