@@ -170,13 +170,13 @@ static vx_status VX_CALLBACK processBrightness(vx_node node, const vx_reference 
         std::cerr<<"\n back from RPP";
         //   float *temp = ((float*)calloc( 100,sizeof(float) ));
 
-        for (int i=0;i< 100;i++)
-                {
-                    temp[i]=*((float *)(data->pDst) + i);
-                    // *((float *)(data->pDst) + i)=*((float *)(data->pDst) + i)*255;
-                    std::cout<<temp[i]<<" ";
+        // for (int i=0;i< 100;i++)
+        //         {
+        //             temp[i]=*((float *)(data->pDst) + i);
+        //             // *((float *)(data->pDst) + i)=*((float *)(data->pDst) + i)*255;
+        //             std::cout<<temp[i]<<" ";
 
-                }
+        //         }
     }
     return return_status;
 }
