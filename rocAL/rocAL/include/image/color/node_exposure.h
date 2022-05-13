@@ -45,18 +45,4 @@ private:
     constexpr static float SHIFT_RANGE [2] = {0.15, 0.95};
 
 };
-// class ExposureNode : public Node
-// {
-// public:
-//     ExposureNode(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs);
-//     ExposureNode() = delete;
-//     void init(float shift);
-//     void init(FloatParam *shift);
 
-// protected:
-//     void update_node() override;
-//     void create_node() override;
-// private:
-//     ParameterVX<float> _shift;
-//     constexpr static float SHIFT_RANGE [2] = {0.15, 0.95};
-// };

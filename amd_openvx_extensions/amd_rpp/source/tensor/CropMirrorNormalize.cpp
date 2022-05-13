@@ -111,7 +111,6 @@ static vx_status VX_CALLBACK refreshCropMirrorNormalize(vx_node node, const vx_r
 
         if (data->in_tensor_type == vx_type_e::VX_TYPE_UINT8 && data->out_tensor_type == vx_type_e::VX_TYPE_UINT8)
         {
-            std::cerr<<"\n ************************************************* Gonna copy tensor source buffer*******************************************";
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_uint8)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_uint8)));
         }
@@ -123,7 +122,7 @@ static vx_status VX_CALLBACK refreshCropMirrorNormalize(vx_node node, const vx_r
         // vx_float16 is not supported. Have to disable it once it is done.
         // else if (in_tensor_type == vx_type_e::VX_TYPE_FLOAT16 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT16)
         // {
-        //     S 0 0
+        //     
             // STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_float16)));
         //     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[3], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float16)));
         // }
@@ -150,8 +149,6 @@ static vx_status VX_CALLBACK refreshCropMirrorNormalize(vx_node node, const vx_r
 
 static vx_status VX_CALLBACK validateCropMirrorNormalize(vx_node node, const vx_reference parameters[], vx_uint32 num, vx_meta_format metas[])
 {
-        // std::cerr<<"\nvalidateCropMirrorNormalize\n";
-
     vx_status status = VX_SUCCESS;
     vx_enum scalar_type;
     STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[13], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
@@ -166,7 +163,7 @@ static vx_status VX_CALLBACK validateCropMirrorNormalize(vx_node node, const vx_
     STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[16], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
     if (scalar_type != VX_TYPE_UINT32)
         return ERRMSG(VX_ERROR_INVALID_TYPE, "validate: Paramter: #16 type=%d (must be size)\n", scalar_type);
-    // std::cerr<<"validate1";
+
 
     // Check for output parameters
     vx_tensor output;
@@ -192,7 +189,6 @@ static vx_status VX_CALLBACK validateCropMirrorNormalize(vx_node node, const vx_
 
 static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
-    // std::cerr<<"\n processCropMirrorNormalize!!";
     vx_status vxstatus;
     RppStatus rpp_status = RPP_SUCCESS;
     vx_status return_status = VX_SUCCESS;
@@ -203,379 +199,6 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
     N = data->nbatchSize;
     C = data->channels;
 
-  /*  if (data->device_type == AGO_TARGET_AFFINITY_GPU)
-    {
-#if ENABLE_OPENCL
-        vxstatus = refreshCropMirrorNormalize(node, parameters, num, data);
-        if (vxstatus != VX_SUCCESS)
-        {
-            return vxstatus;
-        }
-        /*
-        if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_UINT8)
-        {
-            if (C == 1)
-            {
-                // // rpp_status = rppi_crop_mirror_normalize_u8_pln1_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                //                                                         data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                //                                                         data->start_x, data->start_y, data->mean,
-                //                                                         data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                // if (data->is_packed)
-                {
-                    // rpp_status = rppi_crop_mirror_normalize_u8_pkd3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                    //                                                         data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                    //                                                         data->start_x, data->start_y, data->mean,
-                    //                                                         data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-                else
-                {
-                    // rpp_status = rppi_crop_mirror_normalize_u8_pln3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                    //                                                         data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                    //                                                         data->start_x, data->start_y, data->mean,
-                    //                                                         data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_f32_pln1_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                                                                         data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                         data->start_x, data->start_y, data->mean,
-                                                                         data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                {
-                    rpp_status = rppi_crop_mirror_normalize_f32_pkd3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-                else
-                {
-                    rpp_status = rppi_crop_mirror_normalize_f32_pln3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_u8_f32_pln1_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                                                                            data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                            data->start_x, data->start_y, data->mean,
-                                                                            data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                {
-                    int max_src_height, max_src_width;
-                    max_src_width = data->maxSrcDimensions.width;
-                    max_src_height = data->maxSrcDimensions.height;
-                    // std::cerr<<"\n Gonna call rppi_crop_mirror_normalize_u8_f32_pkd3_batchPD_GPU";
-                    rpp_status = rppi_crop_mirror_normalize_u8_f32_pkd3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                                                                                data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                                data->start_x, data->start_y, data->mean,
-                                                                                data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-                else
-                {
-
-                    rpp_status = rppi_crop_mirror_normalize_u8_f32_pln3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                                                                                data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                                data->start_x, data->start_y, data->mean,
-                                                                                data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_INT8 && out_tensor_type == vx_type_e::VX_TYPE_INT8)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_i8_pln1_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                                                                        data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                        data->start_x, data->start_y, data->mean,
-                                                                        data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                {
-                    rpp_status = rppi_crop_mirror_normalize_i8_pkd3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                                                                            data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                            data->start_x, data->start_y, data->mean,
-                                                                            data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-                else
-                {
-                    rpp_status = rppi_crop_mirror_normalize_i8_pln3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-                                                                            data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                            data->start_x, data->start_y, data->mean,
-                                                                            data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-            }
-        }
-        // vx_float16 is not supported. Have to disable it once it is done.
-        // else if (in_tensor_type == vx_type_e::VX_TYPE_FLOAT16 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT16)
-        // {
-        //     if (C == 1)
-        //     {
-        //         rpp_status = rppi_crop_mirror_normalize_f16_pln1_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-        //                                                                  data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                  data->start_x, data->start_y, data->mean,
-        //                                                                  data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //     }
-        //     else
-        //     {
-        //         if (data->is_packed)
-        //         {
-        //             rpp_status = rppi_crop_mirror_normalize_f16_pkd3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-        //                                                                      data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                      data->start_x, data->start_y, data->mean,
-        //                                                                      data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //         else
-        //         {
-        //             rpp_status = rppi_crop_mirror_normalize_f16_pln3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-        //                                                                      data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                      data->start_x, data->start_y, data->mean,
-        //                                                                      data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //     }
-        // }
-        // else if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT16)
-        // {
-        //     if (C == 1)
-        //     {
-        //         rpp_status = rppi_crop_mirror_normalize_u8_f16_pln1_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-        //                                                                   data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                   data->start_x, data->start_y, data->mean,
-        //                                                                   data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //     }
-        //     else
-        //     {
-        //         if (data->is_packed)
-        //         {
-        //             int max_src_height, max_src_width;
-        //             max_src_width = data->maxSrcDimensions.width;
-        //             max_src_height = data->maxSrcDimensions.height;
-        //             // std::cerrPrinting image names of batch: 000000050910.jpg000000321030.jpg�<q�ULoad     time 268
-<<"\n Gonna call rppi_crop_mirror_normalize_u8_f32_pkd3_batchPD_GPU";
-        //             rpp_status = rppi_crop_mirror_normalize_u8_f16_pkd3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-        //                                                                       data->maxSrcDimensions,(void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                       data->start_x, data->start_y, data->mean,
-        //                                                                       data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //         else
-        //         {
-
-        //             rpp_status = rppi_crop_mirror_normalize_u8_f16_pln3_batchPD_gpu((void *)data->cl_pSrc, data->srcDimensions,
-        //                                                                       data->maxSrcDimensions, (void *)data->cl_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                       data->start_x, data->start_y, data->mean,
-        //                                                                       data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //     }
-        // }
-*/
-/*
-        return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
-#elif ENABLE_HIP
-        vxstatus = refreshCropMirrorNormalize(node, parameters, num, data);
-        if (vxstatus != VX_SUCCESS)
-        {
-            return vxstatus;
-        }
-*/
-/*
-        if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_UINT8)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_u8_pln1_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                        data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                        data->start_x, data->start_y, data->mean,
-                                                                        data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                {
-                    rpp_status = rppi_crop_mirror_normalize_u8_pkd3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                            data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                            data->start_x, data->start_y, data->mean,
-                                                                            data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-                else
-                {
-                    rpp_status = rppi_crop_mirror_normalize_u8_pln3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                            data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                            data->start_x, data->start_y, data->mean,
-                                                                            data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_f32_pln1_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                         data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                         data->start_x, data->start_y, data->mean,
-                                                                         data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                {
-                    rpp_status = rppi_crop_mirror_normalize_f32_pkd3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-                else
-                {
-                    rpp_status = rppi_crop_mirror_normalize_f32_pln3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_u8_f32_pln1_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                            data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                            data->start_x, data->start_y, data->mean,
-                                                                            data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                {
-                    int max_src_height, max_src_width;
-                    max_src_width = data->maxSrcDimensions.width;
-                    max_src_height = data->maxSrcDimensions.height;
-                    // std::cerr<<"\n Gonna call rppi_crop_mirror_normalize_u8_f32_pkd3_batchPD_GPU";
-                    rpp_status = rppi_crop_mirror_normalize_u8_f32_pkd3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                                data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                                data->start_x, data->start_y, data->mean,
-                                                                                data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-                else
-                {
-
-                    rpp_status = rppi_crop_mirror_normalize_u8_f32_pln3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                                data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                                data->start_x, data->start_y, data->mean,
-                                                                                data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_INT8 && out_tensor_type == vx_type_e::VX_TYPE_INT8)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_i8_pln1_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                        data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                        data->start_x, data->start_y, data->mean,
-                                                                        data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                {
-                    rpp_status = rppi_crop_mirror_normalize_i8_pkd3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                            data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                            data->start_x, data->start_y, data->mean,
-                                                                            data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-                else
-                {
-                    rpp_status = rppi_crop_mirror_normalize_i8_pln3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-                                                                            data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                            data->start_x, data->start_y, data->mean,
-                                                                            data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-            }
-        }
-        // vx_float16 is not supported. Have to disable it once it is done.
-        // else if (in_tensor_type == vx_type_e::VX_TYPE_FLOAT16 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT16)
-        // {
-        //     if (C == 1)
-        //     {
-        //         rpp_status = rppi_crop_mirror_normalize_f16_pln1_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-        //                                                                  data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                  data->start_x, data->start_y, data->mean,
-        //                                                                  data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //     }
-        //     else
-        //     {
-        //         if (data->is_packed)
-        //         {
-        //             rpp_status = rppi_crop_mirror_normalize_f16_pkd3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-        //                                                                      data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                      data->start_x, data->start_y, data->mean,
-        //                                                                      data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //         else
-        //         {
-        //             rpp_status = rppi_crop_mirror_normalize_f16_pln3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-        //                                                                      data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                      data->start_x, data->start_y, data->mean,
-        //                                                                      data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //     }
-        // }
-        // else if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT16)
-        // {
-        //     if (C == 1)
-        //     {
-        //         rpp_status = rppi_crop_mirror_normalize_u8_f16_pln1_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-        //                                                                   data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                   data->start_x, data->start_y, data->mean,
-        //                                                                   data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //     }
-        //     else
-        //     {
-        //         if (data->is_packed)
-        //         {
-        //             int max_src_height, max_src_width;
-        //             max_src_width = data->maxSrcDimensions.width;
-        //             max_src_height = data->maxSrcDimensions.height;
-        //             // std::cerr<<"\n Gonna call rppi_crop_mirror_normalize_u8_f32_pkd3_batchPD_GPU";
-        //             rpp_status = rppi_crop_mirror_normalize_u8_f16_pkd3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-        //                                                                       data->maxSrcDimensions,(void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                       data->start_x, data->start_y, data->mean,
-        //                                                                       data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //         else
-        //         {
-
-        //             rpp_status = rppi_crop_mirror_normalize_u8_f16_pln3_batchPD_gpu((void *)data->hip_pSrc, data->srcDimensions,
-        //                                                                       data->maxSrcDimensions, (void *)data->hip_pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                       data->start_x, data->start_y, data->mean,
-        //                                                                       data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //     }
-        // }
-        return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
-
-#endif
-    }
-*/
-    // if (data->device_type == AGO_TARGET_AFFINITY_CPU)
     if(data->device_type == AGO_TARGET_AFFINITY_CPU)
     {
         vxstatus = refreshCropMirrorNormalize(node, parameters, num, data);
@@ -585,11 +208,11 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
             std::cerr<<"\n data->roi_tensor_Ptr values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
         }
 
-//typecasting u8 to F32
+    //typecasting u8 to F32
         unsigned long long ioBufferSize = (unsigned long long)data->src_desc_ptr->h * (unsigned long long)data->src_desc_ptr->w * (unsigned long long)data->src_desc_ptr->c * (unsigned long long)data->src_desc_ptr->n;
 
         float *temp = ((float*)calloc( ioBufferSize,sizeof(float) ));
-       if(1)
+       if(0)//make it TRUE for typecasting
        { 
                 std::cerr<<"NHWC" <<(unsigned long long)data->src_desc_ptr->h << "  "<< (unsigned long long)data->src_desc_ptr->w << "  "<<(unsigned long long)data->src_desc_ptr->c <<"  "<< (unsigned long long)data->src_desc_ptr->n;
                 
@@ -604,199 +227,17 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
 
 
         std::cerr<<"\n Gonna call RPP";
-        data->src_desc_ptr->dataType=RpptDataType::F32;   
-        data->dst_desc_ptr->dataType=RpptDataType::F32;
-        std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ source  datatype      "<<data->src_desc_ptr->dataType;
-        std::cerr<<"\n$$$$$$$$$$$$$$$$$$$$$$$$ destination datatype      "<<data->src_desc_ptr->dataType;
-
-        
-        rpp_status = rppt_crop_mirror_normalize_host(temp , data->src_desc_ptr,
+        // checking for fp32 input
+        // data->src_desc_ptr->dataType=RpptDataType::F32;   
+        // data->dst_desc_ptr->dataType=RpptDataType::F32;
+        rpp_status = rppt_crop_mirror_normalize_host(data->pSrc , data->src_desc_ptr,
                                                 data->pDst, data->dst_desc_ptr,
+                                            
+                                            
                                                  data->mean,data->std_dev,
                                                  data->mirror, data->roi_tensor_Ptr,data->roiType,
                                                  data->rppHandle);
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
-
-        //printing the pixel values of images
-        
-
-        // std::cerr<<"\n back from RPP";
-        // exit(0);
-
-        // std::cerr<<"\n CMN Tensor in host";
-       /* if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_UINT8)
-        {
-            if (C == 1)
-            {
-                rpp_status = ppt_crop_mirror_normalize_host(data->pSrc, data->src_desc_ptr,
-                                                data->pDst, data->dst_desc_ptr,
-                                                 data->mean,data->std_dev,
-                                                 data->mirror, data->roi_tensor_Ptr,data->roiType,
-                                                 data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                    rpp_status = rppi_crop_mirror_normalize_u8_pkd3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                else
-                    rpp_status = rppi_crop_mirror_normalize_u8_pln3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_INT8 && out_tensor_type == vx_type_e::VX_TYPE_INT8)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_i8_pln1_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                         data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                         data->start_x, data->start_y, data->mean,
-                                                                         data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                    rpp_status = rppi_crop_mirror_normalize_i8_pkd3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                else
-                    rpp_status = rppi_crop_mirror_normalize_i8_pln3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_f32_pln1_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                          data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                          data->start_x, data->start_y, data->mean,
-                                                                          data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-
-                // std::cerr<<"\n CMN Tensor in IP: u8 OP: FP32";
-                if (data->is_packed)
-                    rpp_status = rppi_crop_mirror_normalize_f32_pkd3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                              data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                              data->start_x, data->start_y, data->mean,
-                                                                              data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                else
-                    rpp_status = rppi_crop_mirror_normalize_f32_pln3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                              data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                              data->start_x, data->start_y, data->mean,
-                                                                              data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_u8_f32_pln1_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-
-                // std::cerr<<"\n CMN Tensor in IP: u8 OP: FP32";
-                if (data->is_packed)
-                {
-
-                    std::cerr << "\n Gonna call rppi_crop_mirror_normalize_u8_f32_pkd3_batchPD_host";
-                    rpp_status = rppi_crop_mirror_normalize_u8_f32_pkd3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                                 data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                                 data->start_x, data->start_y, data->mean,
-                                                                                 data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-                else
-                {
-
-                    rpp_status = rppi_crop_mirror_normalize_u8_f32_pln3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                                 data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                                 data->start_x, data->start_y, data->mean,
-                                                                                 data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                }
-            }
-        }
-        else if (in_tensor_type == vx_type_e::VX_TYPE_INT8 && out_tensor_type == vx_type_e::VX_TYPE_INT8)
-        {
-            if (C == 1)
-            {
-                rpp_status = rppi_crop_mirror_normalize_i8_pln1_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                         data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                         data->start_x, data->start_y, data->mean,
-                                                                         data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-            else
-            {
-                if (data->is_packed)
-                    rpp_status = rppi_crop_mirror_normalize_i8_pkd3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-                else
-                    rpp_status = rppi_crop_mirror_normalize_i8_pln3_batchPD_host(data->pSrc, data->srcDimensions,
-                                                                             data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-                                                                             data->start_x, data->start_y, data->mean,
-                                                                             data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-            }
-        }
-        // else if (in_tensor_type == vx_type_e::VX_TYPE_FLOAT16 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT16)
-        // {
-        //     if (C == 1)
-        //     {
-        //         rpp_status = rppi_crop_mirror_normalize_f16_pln1_batchPD_host(data->pSrc, data->srcDimensions,
-        //                                                                   data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                   data->start_x, data->start_y, data->mean,
-        //                                                                   data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //     }
-        //     else
-        //     {
-        //   extern "C" SHARED_PUBLIC vx_node VX_API_CALL vxExtrppNode_GammaCorrection(vx_graph graph, vx_tensor pSrc,vx_array srcROI, vx_tensor pDst, vx_array gamma,vx_scalar layout, vx_scalar roiType, vx_uint32 nbatchSize);
- ^~~~~~
-       else
-        //             rpp_status = rppi_crop_mirror_normalize_f16_pln3_batchPD_host(data->pSrc, data->srcDimensions,
-        //                                                                       data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                       data->start_x, data->start_y, data->mean,
-        //                                                                       data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //     }
-        // }
-        // else if (in_tensor_type == vx_type_e::VX_TYPE_UINT8 && out_tensor_type == vx_type_e::VX_TYPE_FLOAT16)
-        // {
-        //     if (C == 1)
-        //     {
-        //         rpp_status = rppi_crop_mirror_normalize_u8_f16_pln1_batchPD_host(data->pSrc, data->srcDimensions,
-        //                                                                   data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                   data->start_x, data->start_y, data->mean,
-        // extern "C" SHARED_PUBLIC vx_node VX_API_CALL vxExtrppNode_GammaCorrection(vx_graph graph, vx_tensor pSrc,vx_array srcROI, vx_tensor pDst, vx_array gamma,vx_scalar layout, vx_scalar roiType, vx_uint32 nbatchSize);
- ^~~~~~
-
-        //             rpp_status = rppi_crop_mirror_normalize_u8_f16_pkd3_batchPD_host(data->pSrc, data->srcDimensions,
-        //                                                                       data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                       data->start_x, data->start_y, data->mean,
-        //                                                                       data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //         else
-        //         {
-
-        //             rpp_status = rppi_crop_mirror_normalize_u8_f16_pln3_batchPD_host(data->pSrc, data->srcDimensions,
-        //                                                                       data->maxSrcDimensions, data->pDst, data->dstDimensions, data->maxDstDimensions,
-        //                                                                       data->start_x, data->start_y, data->mean,
-        //                                                                       data->std_dev, data->mirror, data->chnShift, N, data->rppHandle);
-        //         }
-        //     }
-        // }
-*/
 
     }
     return return_status;
@@ -804,8 +245,6 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
 
 static vx_status VX_CALLBACK initializeCropMirrorNormalize(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
-    // std::cerr<<"\ninitializationcropmirror";
-    // std::cerr<<"\n INIT1";
     CropMirrorNormalizeLocalData *data = new CropMirrorNormalizeLocalData;
     unsigned layout, roiType;
     memset(data, 0, sizeof(*data));
@@ -817,7 +256,6 @@ static vx_status VX_CALLBACK initializeCropMirrorNormalize(vx_node node, const v
 
 ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hipstream, sizeof(data->handle.hipstream)));
 #endif
-// std::cerr<<"\n INIT3";
     STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[16], &data->device_type, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     STATUS_ERROR_CHECK(vxReadScalarValue((vx_scalar)parameters[15], &data->nbatchSize));
     STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[13], &layout, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
@@ -879,8 +317,7 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
         data->dst_desc_ptr->dataType = RpptDataType::I8;
     }
      data->dst_desc_ptr->offsetInBytes = 0;
-    // std::cerr<<"\n INIT4";
-    // std::cerr<<'\nbathcsize'<<data->nbatchSize;
+
     //declaring and pushing values to roi_tensor_Ptr
     data->roi_tensor_Ptr = (RpptROI *) calloc(data->nbatchSize, sizeof(RpptROI));
 
@@ -944,15 +381,7 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
     data->start_y = (vx_uint32 *)malloc(sizeof(vx_uint32) * data->nbatchSize);
     data->crop_w = (vx_uint32 *)malloc(sizeof(vx_uint32) * data->nbatchSize);
     data->crop_h = (vx_uint32 *)malloc(sizeof(vx_uint32) * data->nbatchSize);
-   /* for(int i = 0; i < data->nbatchSize; i++)
-    {
-        data->roi_tensor_Ptr[i].xywhROI.xy.x = data->start_x[i];
-        data->roi_tensor_Ptr[i].xywhROI.xy.y = data->start_y[i];
-        data->roi_tensor_Ptr[i].xywhROI.roiWidth = data->crop_w[i];
-        data->roi_tensor_Ptr[i].xywhROI.roiHeight = data->crop_h[i];
-        std::cerr<<"crop_width"<<data->crop_w[i]<<'\n';
-
-    }*/
+ 
     refreshCropMirrorNormalize(node, parameters, num, data);
 #if ENABLE_OPENCL
     if (data->device_type == AGO_TARGET_AFFINITY_GPU)
@@ -966,50 +395,7 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
     return VX_SUCCESS;
 }
 
-    //     vx_status status;
-    //     CropMirrorNormalizeLocalData *data = new CropMirrorNormalizeLocalData;
-    //     memset(data, 0, sizeof(*data));
-    // #if ENABLE_OPENCL
-    //     STATUS_ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_OPENCL_COMMAND_QUEUE, &data->handle.cmdq, sizeof(data->handle.cmdq)));
-    // #elif ENABLE_HIP
-    //     STATUS_ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hipstream, sizeof(data->handle.hipstream)));
-    // #endif
-    //     STATUS_ERROR_CHECK(vxCopyScalar((vx_scalar)parameters[14], &data->device_type, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    //     STATUS_ERROR_CHECK(vxReadScalarValue((vx_scalar)parameters[13], &data->batch_size));
-    //     vx_size num_of_dims = NUM_OF_DIMS;
-    //     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_NUMBER_OF_DIMS, &num_of_dims, sizeof(vx_size)));
-    //     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_DIMS, data->in_tensor_dims, sizeof(vx_size) * num_of_dims));
-    //     STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[3], VX_TENSOR_DIMS, data->out_tensor_dims, sizeof(vx_size) * num_of_dims));
-    //     data->start_x = (vx_uint32 *)malloc(sizeof(vx_uint32) * data->batch_size);
-    //     data->start_y = (vx_uint32 *)malloc(sizeof(vx_uint32) * data->batch_size);
-    //     data->mean = (vx_float32 *)malloc(sizeof(vx_float32) * data->batch_size);
-    //     data->std_dev = (vx_float32 *)malloc(sizeof(vx_float32) * data->batch_size);
-    //     data->mirror = (vx_uint32 *)malloc(sizeof(vx_uint32) * data->batch_size);
-    //     data->srcDimensions = (RppiSize *)malloc(sizeof(RppiSize) * data->batch_size);
-    //     data->dstDimensions = (RppiSize *)malloc(sizeof(RppiSize) * data->batch_size);
-    //     data->srcBatch_width = (Rpp32u *)malloc(sizeof(Rpp32u) * data->batch_size);
-    //     data->srcBatch_height = (Rpp32u *)malloc(sizeof(Rpp32u) * data->batch_size);
-    //     data->dstBatch_width = (Rpp32u *)malloc(sizeof(Rpp32u) * data->batch_size);
-    //     data->dstBatch_height = (Rpp32u *)malloc(sizeof(Rpp32u) * data->batch_size);
-    //     status = refreshCropMirrorNormalize(node, parameters, num, data);
-    //     if (status != VX_SUCCESS)
-    //     {
-    //         std::cerr << "\n refreshCropMirrorNormalize exited with status :: " << status;
-
-    //         return status;
-    //     }
-    // #if ENABLE_OPENCL
-    //     if (data->device_type == AGO_TARGET_AFFINITY_GPU)
-    //         rppCreateWithStreamAndBatchSize(&data->rppHandle, data->handle.cmdq, data->batch_size);
-    //     std::cerr << "\n Finished rppCreateWithStreamAndBatchSize";
-    // #endif
-    //     if (data->device_type == AGO_TARGET_AFFINITY_CPU)
-    //         rppCreateWithBatchSize(&data->rppHandle, data->batch_size);
-
-    //     STATUS_ERROR_CHECK(vxSetNodeAttribute(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
-    //     return VX_SUCCESS;
-    // }
-
+   
 static vx_status VX_CALLBACK uninitializeCropMirrorNormalize(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
     CropMirrorNormalizeLocalData *data;
@@ -1057,7 +443,6 @@ static vx_status VX_CALLBACK query_target_support(vx_graph graph, vx_node node,
 
 vx_status CropMirrorNormalize_Register(vx_context context)
 {
-    // std::cerr<<"CropMirrorNormalize_Register\n";
     vx_status status = VX_SUCCESS;
     // Add kernel to the context with callbacks
     vx_kernel kernel = vxAddUserKernel(context, "org.rpp.CropMirrorNormalize",

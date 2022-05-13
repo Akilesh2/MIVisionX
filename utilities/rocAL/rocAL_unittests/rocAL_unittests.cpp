@@ -164,8 +164,6 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
                   << " Crop Mirror Normalize Tensor" << std::endl;
         std::cerr<<"In unit_Test batchsize "<< inputBatchSize<<"\n";
         image1 = rocalCropMirrorNormalizeTensor(handle, input1, tensorLayout, tensorOutputType, 3, resize_w, resize_h, 10, 10, 0, mean, sdev, true);
-            image1 = rocalGammaTensor(handle, image1, tensorLayout, tensorOutputType, true);
-
     }
     break;
     case 1:
