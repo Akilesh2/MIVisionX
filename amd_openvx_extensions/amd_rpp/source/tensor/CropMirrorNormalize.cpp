@@ -207,30 +207,24 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
         {
             std::cerr<<"\n data->roi_tensor_Ptr values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
         }
-
-    //typecasting u8 to F32
         unsigned long long ioBufferSize = (unsigned long long)data->src_desc_ptr->h * (unsigned long long)data->src_desc_ptr->w * (unsigned long long)data->src_desc_ptr->c * (unsigned long long)data->src_desc_ptr->n;
-
         float *temp = ((float*)calloc( ioBufferSize,sizeof(float) ));
-       if(0)//make it TRUE for typecasting
+
+       if(1)
        { 
-                std::cerr<<"NHWC" <<(unsigned long long)data->src_desc_ptr->h << "  "<< (unsigned long long)data->src_desc_ptr->w << "  "<<(unsigned long long)data->src_desc_ptr->c <<"  "<< (unsigned long long)data->src_desc_ptr->n;
-                
-                std ::cerr<<"\n ioBufferSize "<<ioBufferSize;
                 for (int i=0;i< ioBufferSize;i++)
                 {
-                    temp[i]=(float)(*(unsigned char*)(data->pSrc));
-                    data->pSrc +=1;
-
+                    temp[i]=(float)*((unsigned char*)(data->pSrc) + i);
                 }
        }
 
 
+
         std::cerr<<"\n Gonna call RPP";
-        // checking for fp32 input
-        // data->src_desc_ptr->dataType=RpptDataType::F32;   
-        // data->dst_desc_ptr->dataType=RpptDataType::F32;
-        rpp_status = rppt_crop_mirror_normalize_host(data->pSrc , data->src_desc_ptr,
+        data->src_desc_ptr->dataType=RpptDataType::F32;   
+        data->dst_desc_ptr->dataType=RpptDataType::F32;
+        
+        rpp_status = rppt_crop_mirror_normalize_host(temp, data->src_desc_ptr,
                                                 data->pDst, data->dst_desc_ptr,
                                             
                                             
@@ -238,6 +232,24 @@ static vx_status VX_CALLBACK processCropMirrorNormalize(vx_node node, const vx_r
                                                  data->mirror, data->roi_tensor_Ptr,data->roiType,
                                                  data->rppHandle);
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
+
+        //printing the pixel values of images
+        std::cerr<<"crop\n";
+        for (int i=0;i< 100;i++)
+                {
+                    // temp[i]=(float)(*(unsigned char*)(data->pSrc));
+
+                    temp[i]=*((float *)(data->pDst) + i);
+                    std::cout<<temp[i]<<" "<<std::endl;
+
+                    // data->pSrc +=1;
+                }
+    
+
+
+        
+
+     
 
     }
     return return_status;
@@ -317,7 +329,6 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
         data->dst_desc_ptr->dataType = RpptDataType::I8;
     }
      data->dst_desc_ptr->offsetInBytes = 0;
-
     //declaring and pushing values to roi_tensor_Ptr
     data->roi_tensor_Ptr = (RpptROI *) calloc(data->nbatchSize, sizeof(RpptROI));
 
@@ -348,7 +359,6 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
         data->dst_desc_ptr->strides.wStride = data->dst_desc_ptr->c;
         data->dst_desc_ptr->strides.cStride = 1;
         data->dst_desc_ptr->layout = RpptLayout::NHWC;
-
     }
     else // NCHW
     {
@@ -396,6 +406,7 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
 }
 
    
+
 static vx_status VX_CALLBACK uninitializeCropMirrorNormalize(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
     CropMirrorNormalizeLocalData *data;

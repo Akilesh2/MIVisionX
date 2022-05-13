@@ -74,6 +74,7 @@ rocalCopyToTensorOutput(
         void * out_ptr,
         size_t out_size)
 {
+    std::cerr<<"rocalCopyToTensorOutput";
     auto context = static_cast<Context*>(p_context);
     try
     {

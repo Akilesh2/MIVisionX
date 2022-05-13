@@ -40,7 +40,7 @@ struct BrightnessLocalData
     RpptRoiType roiType;
     size_t in_tensor_dims[NUM_OF_DIMS];
     vx_enum in_tensor_type ;
-    vx_enum out_tensor_type; // will have NHWC info
+    vx_enum out_tensor_type; 
 #if ENABLE_OPENCL
     cl_mem cl_pSrc;
     cl_mem cl_pDst;
@@ -52,12 +52,10 @@ struct BrightnessLocalData
 
 static vx_status VX_CALLBACK refreshBrightness(vx_node node, const vx_reference *parameters, vx_uint32 num, BrightnessLocalData *data)
 {
-    std::cerr<<"\nrefresh";
     vx_status status = VX_SUCCESS;
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[1], 0, data->nbatchSize * 4, sizeof(unsigned), data->roi_tensor_Ptr, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[3], 0, data->nbatchSize, sizeof(vx_float32), data->alpha, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
     STATUS_ERROR_CHECK(vxCopyArrayRange((vx_array)parameters[4], 0, data->nbatchSize, sizeof(vx_float32), data->beta, VX_READ_ONLY, VX_MEMORY_TYPE_HOST));
-    std::cerr<<"\nalpha value"<<data->alpha<<'\n';
     if (data->device_type == AGO_TARGET_AFFINITY_GPU)
     {
 #if ENABLE_OPENCL
@@ -77,6 +75,8 @@ static vx_status VX_CALLBACK refreshBrightness(vx_node node, const vx_reference 
         }
         else if (data->in_tensor_type == vx_type_e::VX_TYPE_FLOAT32 && data->out_tensor_type == vx_type_e::VX_TYPE_FLOAT32)
         {
+            std::cerr<<"*******************FLOAT32*******************";
+
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[0], VX_TENSOR_BUFFER_HOST, &data->pSrc, sizeof(vx_float32)));
             STATUS_ERROR_CHECK(vxQueryTensor((vx_tensor)parameters[2], VX_TENSOR_BUFFER_HOST, &data->pDst, sizeof(vx_float32)));
         }
@@ -103,7 +103,7 @@ static vx_status VX_CALLBACK refreshBrightness(vx_node node, const vx_reference 
 
 static vx_status VX_CALLBACK validateBrightness(vx_node node, const vx_reference parameters[], vx_uint32 num, vx_meta_format metas[])
 {
-    std::cerr<<"validate";
+    std::cerr<<"BRIGHTNESS";
     vx_status status = VX_SUCCESS;
     vx_enum scalar_type;
     STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[5], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
@@ -115,7 +115,7 @@ static vx_status VX_CALLBACK validateBrightness(vx_node node, const vx_reference
     STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[7], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
     if (scalar_type != VX_TYPE_UINT32)
         return ERRMSG(VX_ERROR_INVALID_TYPE, "validate: Paramter: #7 type=%d (must be size)\n", scalar_type);
-    STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[7], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
+    STATUS_ERROR_CHECK(vxQueryScalar((vx_scalar)parameters[8], VX_SCALAR_TYPE, &scalar_type, sizeof(scalar_type)));
     if (scalar_type != VX_TYPE_UINT32)
         return ERRMSG(VX_ERROR_INVALID_TYPE, "validate: Paramter: #8 type=%d (must be size)\n", scalar_type);
     // Check for output parameters
@@ -142,7 +142,6 @@ static vx_status VX_CALLBACK validateBrightness(vx_node node, const vx_reference
 
 static vx_status VX_CALLBACK processBrightness(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
-    std::cerr<<"process";
     RppStatus rpp_status = RPP_SUCCESS;
     vx_status return_status = VX_SUCCESS;
     BrightnessLocalData *data = NULL;
@@ -162,7 +161,6 @@ static vx_status VX_CALLBACK processBrightness(vx_node node, const vx_reference 
     if (data->device_type == AGO_TARGET_AFFINITY_CPU)
     {
         refreshBrightness(node, parameters, num, data);
-        std::cerr<<"batchsize"<<data->nbatchSize;
         for(int i = 0; i < data->nbatchSize; i++)
         {
             std::cerr<<"\n bbox values :: "<<data->roi_tensor_Ptr[i].xywhROI.xy.x<<" "<<data->roi_tensor_Ptr[i].xywhROI.xy.y<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiWidth<<" "<<data->roi_tensor_Ptr[i].xywhROI.roiHeight;
@@ -170,6 +168,15 @@ static vx_status VX_CALLBACK processBrightness(vx_node node, const vx_reference 
         rpp_status = rppt_brightness_host(data->pSrc, data->src_desc_ptr, data->pDst, data->src_desc_ptr, data->alpha, data->beta, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
         std::cerr<<"\n back from RPP";
+        //   float *temp = ((float*)calloc( 100,sizeof(float) ));
+
+        for (int i=0;i< 100;i++)
+                {
+                    temp[i]=*((float *)(data->pDst) + i);
+                    // *((float *)(data->pDst) + i)=*((float *)(data->pDst) + i)*255;
+                    std::cout<<temp[i]<<" ";
+
+                }
     }
     return return_status;
 }
