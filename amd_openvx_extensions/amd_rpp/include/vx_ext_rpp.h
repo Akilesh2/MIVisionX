@@ -136,6 +136,8 @@ extern "C" SHARED_PUBLIC vx_node VX_API_CALL vxExtrppNode_CropMirrorNormalize(vx
 extern "C" SHARED_PUBLIC vx_node VX_API_CALL vxExtrppNode_GammaCorrection(vx_graph graph, vx_tensor pSrc,vx_array srcROI, vx_tensor pDst, vx_array gamma,vx_scalar layout, vx_scalar roiType, vx_uint32 nbatchSize);
 extern "C" SHARED_PUBLIC vx_node VX_API_CALL vxExtrppNode_Exposure(vx_graph graph, vx_tensor pSrc,vx_array srcROI, vx_tensor pDst, vx_array exposure,vx_scalar layout, vx_scalar roiType, vx_uint32 nbatchSize);
 extern "C" SHARED_PUBLIC vx_node VX_API_CALL vxExtrppNode_NopTensor(vx_graph graph, vx_tensor pSrc, vx_tensor pDst);
+extern "C" SHARED_PUBLIC vx_node VX_API_CALL vxExtrppNode_ColorTwist(vx_graph graph, vx_tensor pSrc, vx_array srcROI, vx_tensor pDst, vx_array alpha, vx_array beta, vx_array hue, vx_array sat, vx_scalar layout, vx_scalar roiType, vx_uint32 nbatchSize);
+
 
 #ifdef __cplusplus
 }

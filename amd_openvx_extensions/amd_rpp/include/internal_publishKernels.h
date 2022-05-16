@@ -41,6 +41,8 @@ vx_status CopyTensor_Register(vx_context);
 vx_status CropMirrorNormalize_Register(vx_context);
 vx_status GammaCorrection_Register(vx_context);
 vx_status Exposure_Register(vx_context);
+vx_status ColorTwist_Register(vx_context);
+
 vx_status NopTensor_Register(vx_context);
 
 // Image registers which calls RPP Image Batch PD API's.
@@ -132,6 +134,8 @@ vx_status WarpPerspectivebatchPD_Register(vx_context);
 #define VX_KERNEL_RPP_GAMMACORRECTION_NAME                                   "org.rpp.GammaCorrection"
 #define VX_KERNEL_RPP_CROPMIRRORNORMALIZE_NAME                               "org.rpp.CropMirrorNormalize"
 #define VX_KERNEL_RPP_EXPOSURE_NAME                                          "org.rpp.Exposure"
+#define VX_KERNEL_RPP_COLORTWIST_NAME                                          "org.rpp.ColorTwist"
+
 
 
 // Image kernel names

@@ -191,6 +191,14 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         image1 = rocalExposureTensor(handle, input1, tensorLayout, tensorOutputType, true);
 
     }
+    case 4: 
+    {
+        std::cout << ">>>>>>> Running "
+                  << "rocalColorCast" << std::endl;
+        image1 = rocalColorTwistTensor(handle, input1, tensorLayout, tensorOutputType, true);
+
+    }
+
     break;
     default:
         std::cout << "Not a valid option! Exiting!\n";
