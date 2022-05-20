@@ -86,6 +86,17 @@ extern "C" RocalTensor ROCAL_API_CALL rocalCropTensor(RocalContext context, Roca
                                                                   float start_z,
                                                                   bool is_output);
 
+
+extern "C" RocalTensor ROCAL_API_CALL rocalResizeTensor(RocalContext context, RocalTensor input,
+                                                                  RocalTensorLayout rocal_tensor_layout,
+                                                                  RocalTensorOutputType rocal_tensor_output_type,
+                                                                  unsigned crop_depth,
+                                                                  unsigned crop_height,
+                                                                  unsigned crop_width,
+                                                                  int interpolation_type,
+                                                                  bool is_output);
+
+
 /// Accepts U8 and RGB24 inputs
 /// \param context
 /// \param input

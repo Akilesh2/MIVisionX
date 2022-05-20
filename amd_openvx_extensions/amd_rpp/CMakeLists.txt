@@ -136,6 +136,7 @@ list(APPEND SOURCES
         source/tensor/Exposure.cpp
         source/tensor/ColorTwist.cpp
         source/tensor/Crop.cpp
+        source/tensor/Resize.cpp
         source/tensor/Nop.cpp
         source/kernel_rpp.cpp
         source/internal_publishKernels.cpp

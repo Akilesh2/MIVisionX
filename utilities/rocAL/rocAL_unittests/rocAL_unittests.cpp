@@ -173,37 +173,45 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         std::cout << ">>>>>>> Running "
                   << "rocalBrightness" << std::endl;
         image1 = rocalBrightnessTensor(handle, input1, tensorLayout, tensorOutputType, true);
-    }
     break;
+    }
     case 2:
     {
         std::cout << ">>>>>>> Running "
                   << "rocalGamma" << std::endl;
         image1 = rocalGammaTensor(handle, input1, tensorLayout, tensorOutputType, true);
-    }
     break;
+    }
+    
     case 3: 
     {
         std::cout << ">>>>>>> Running "
                   << "rocalExposure" << std::endl;
         image1 = rocalExposureTensor(handle, input1, tensorLayout, tensorOutputType, true);
-
+    break;
     }
     case 4: 
     {
         std::cout << ">>>>>>> Running "
-                  << "rocalColorCast" << std::endl;
+                  << "rocalColorTwist" << std::endl;
         image1 = rocalColorTwistTensor(handle, input1, tensorLayout, tensorOutputType, true);
-
+    break;
     }
+
     case 5: 
     {
         std::cout << ">>>>>>> Running "
                   << "rocalCrop" << std::endl;
         image1 = rocalCropTensor(handle, input1, tensorLayout, tensorOutputType, 3, resize_w, resize_h, 0, 0, 0,true);
-    }
-
     break;
+    }
+    case 6: 
+    {
+        std::cout << ">>>>>>> Running "
+                  << "rocalResize" << std::endl;
+        image1 = rocalResizeTensor(handle, input1, tensorLayout, tensorOutputType, 3, 100, 100, 0,true);
+    break;
+    }
     default:
         std::cout << "Not a valid option! Exiting!\n";
         return -1;
