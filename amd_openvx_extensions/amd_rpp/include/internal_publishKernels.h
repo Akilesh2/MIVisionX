@@ -44,6 +44,7 @@ vx_status Exposure_Register(vx_context);
 vx_status ColorTwist_Register(vx_context);
 vx_status Crop_Register(vx_context);
 vx_status Resize_Register(vx_context);
+vx_status ColorCast_Register(vx_context);
 
 
 vx_status NopTensor_Register(vx_context);
@@ -139,7 +140,9 @@ vx_status WarpPerspectivebatchPD_Register(vx_context);
 #define VX_KERNEL_RPP_EXPOSURE_NAME                                          "org.rpp.Exposure"
 #define VX_KERNEL_RPP_COLORTWIST_NAME                                        "org.rpp.ColorTwist"
 #define VX_KERNEL_RPP_CROP_NAME                                              "org.rpp.Crop"
-#define VX_KERNEL_RPP_RESIZE_NAME                                              "org.rpp.Resize"
+#define VX_KERNEL_RPP_RESIZE_NAME                                            "org.rpp.Resize"
+#define VX_KERNEL_RPP_COLORCAST_NAME                                         "org.rpp.ColorCast"
+
 
 
 

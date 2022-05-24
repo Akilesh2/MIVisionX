@@ -135,11 +135,14 @@ list(APPEND SOURCES
         source/tensor/GammaCorrection.cpp
         source/tensor/Exposure.cpp
         source/tensor/ColorTwist.cpp
+        source/tensor/ColorCast.cpp
+
         source/tensor/Crop.cpp
         source/tensor/Resize.cpp
         source/tensor/Nop.cpp
         source/kernel_rpp.cpp
         source/internal_publishKernels.cpp
+
     )
 
 link_directories(${AMDRPP_LIBRARIES_DIR})

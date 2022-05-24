@@ -212,6 +212,13 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         image1 = rocalResizeTensor(handle, input1, tensorLayout, tensorOutputType, 3,resize_w , resize_h, 0,true);
     break;
     }
+    case 7: 
+    {
+        std::cout << ">>>>>>> Running "
+                  << "rocalColorCast" << std::endl;
+        image1 = rocalColorCastTensor(handle, input1, tensorLayout, tensorOutputType, true);
+    break;
+    }
     default:
         std::cout << "Not a valid option! Exiting!\n";
         return -1;
