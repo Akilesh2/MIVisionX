@@ -89,7 +89,8 @@ public:
     void create_randombboxcrop_reader(RandomBBoxCrop_MetaDataReaderType reader_type, RandomBBoxCrop_MetaDataType label_type, bool all_boxes_overlap, bool no_crop, FloatParam* aspect_ratio, bool has_shape, int crop_width, int crop_height, int num_attempts, FloatParam* scaling, int total_num_attempts, int64_t seed=0);
     const std::pair<ImageNameBatch,pMetaDataBatch>& meta_data();
     void set_loop(bool val) { _loop = val; }
-    bool empty() { return (remaining_count() < (_is_sequence_reader_output ? _sequence_batch_size : _user_batch_size)); }
+    bool empty() { return false; }
+    // bool empty() { return (remaining_count() < (_is_sequence_reader_output ? _sequence_batch_size : _user_batch_size)); } // Fix this - shobi
     size_t internal_batch_size() { return _internal_batch_size; }
     size_t sequence_batch_size() { return _sequence_batch_size; }
     std::shared_ptr<MetaDataGraph> meta_data_graph() { return _meta_data_graph; }
@@ -101,7 +102,7 @@ public:
     void set_sequence_reader_output() { _is_sequence_reader_output = true; }
     void set_sequence_batch_size(size_t sequence_length) { _sequence_batch_size = _user_batch_size * sequence_length; }
     void set_sequence_batch_ratio() { _sequence_batch_ratio = _sequence_batch_size / _internal_batch_size; }
-    void feed_external_input(std::vector<std::string> input_images, std::vector<std::string> labels, unsigned char *input_buffer, std::vector<unsigned> roi_width, std::vector<unsigned> roi_height, unsigned int max_width, unsigned int max_height, FileMode mode, RaliTensorFormat layout);
+    void feed_external_input(std::vector<std::string> input_images, std::vector<std::string> labels, unsigned char *input_buffer, std::vector<unsigned> roi_width, std::vector<unsigned> roi_height, unsigned int max_width, unsigned int max_height, FileMode mode, RaliTensorFormat layout, bool eos);
 private:
     Status update_node_parameters();
     Status allocate_output_tensor();
@@ -177,6 +178,7 @@ private:
     float _scale; // Rescales the box and anchor values before the offset is calculated (for example, to return to the absolute values).
     bool _offset; // Returns normalized offsets ((encoded_bboxes*scale - anchors*scale) - mean) / stds in EncodedBBoxes that use std and the mean and scale arguments if offset="True"
     std::vector<float> _means, _stds; //_means:  [x y w h] mean values for normalization _stds: [x y w h] standard deviations for offset normalization.
+    bool _external_source_eos = false;
 };
 
 template <typename T>

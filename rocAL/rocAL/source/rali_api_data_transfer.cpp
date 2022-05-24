@@ -102,14 +102,15 @@ raliExternalSourceFeedInput(
         unsigned int max_width,
         unsigned int max_height,
         RaliExtSourceMode mode,
-        RaliTensorLayout layout)
+        RaliTensorLayout layout,
+        bool eos)
 {
     auto context = static_cast<Context*>(p_context);
     try
     {
         FileMode file_mode = (FileMode) mode;
         RaliTensorFormat format = (RaliTensorFormat) layout;
-        context->master_graph->feed_external_input(input_images, labels, input_buffer, roi_width, roi_height, max_width, max_height, file_mode, format);
+        context->master_graph->feed_external_input(input_images, labels, input_buffer, roi_width, roi_height, max_width, max_height, file_mode, format, eos);
         // should call root_node process_input
     }
     catch(const std::exception& e)

@@ -212,13 +212,15 @@ MasterGraph::run()
 {
     if(!_processing)// The user should not call the run function before the build() is called or while reset() is happening
         return MasterGraph::Status::NOT_RUNNING;
-
+    // std::cerr<<"\n MasterGraph::run() 1";
+    std::cerr<<"\n **********************************************************";
     if(no_more_processed_data()) {
         return MasterGraph::Status::NO_MORE_DATA;
     }
-
+    std::cerr<<"\n **********************************************************";
+// std::cerr<<"\n MasterGraph::run() 2";
     _ring_buffer.block_if_empty();// wait here if the user thread (caller of this function) is faster in consuming the processed images compare to th output routine in producing them
-
+// std::cerr<<"\n MasterGraph::run() 3";
     if(_first_run)
     {
         // calling run pops the processed images that have been used by user, when user calls run() for the first time
@@ -227,15 +229,16 @@ MasterGraph::run()
     } else {
         _ring_buffer.pop(); // Pop previously used output images and metadata from the ring buffer
     }
-
+// std::cerr<<"\n MasterGraph::run() 4";
     // If the last batch of processed imaged has been just popped from the ring_buffer it means user has previously consumed all the processed images.
     // User should check using the IsEmpty() API and not call run() or copy() API when there is no more data. run() will return MasterGraph::Status::NO_MORE_DATA flag to notify it.
+    std::cerr<<"\n **********************************************************";
     if(no_more_processed_data()) {
         return MasterGraph::Status::NO_MORE_DATA;
     }
-
+// std::cerr<<"\n MasterGraph::run() 5";
     decrease_image_count();
-
+// std::cerr<<"\n MasterGraph::run() 6";
     return MasterGraph::Status::OK;
 }
 
@@ -497,6 +500,8 @@ MasterGraph::reset()
 size_t
 MasterGraph::remaining_count()
 {
+    _remaining_count = 3; // need to set remaining count wrt eos in external source - shobi
+    std::cerr<<"\n MasterGraph::remaining_count() ::"<<_remaining_count;
     return (_remaining_count >= 0) ? _remaining_count:0;
 }
 
@@ -881,6 +886,14 @@ void MasterGraph::output_routine()
             {
                 // If the internal process routine ,output_routine(), has finished processing all the images, and last
                 // processed images stored in the _ring_buffer will be consumed by the user when it calls the run() func
+                notify_user_thread();
+                // the following call is required in case the ring buffer is waiting for more data to be loaded and there is no more data to process.
+                _ring_buffer.release_if_empty();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            }
+            else if(_external_source_eos)
+            {
                 notify_user_thread();
                 // the following call is required in case the ring buffer is waiting for more data to be loaded and there is no more data to process.
                 _ring_buffer.release_if_empty();
@@ -1371,14 +1384,17 @@ void MasterGraph::notify_user_thread()
 
 bool MasterGraph::no_more_processed_data()
 {
+    std::cerr<<"\n _output_routine_finished_processing "<<_output_routine_finished_processing;
+    std::cerr<<"\n _ring_buffer.empty()  "<<_ring_buffer.empty();
     return (_output_routine_finished_processing && _ring_buffer.empty());
 }
 
 void MasterGraph::feed_external_input(std::vector<std::string> input_images, std::vector<std::string> labels, unsigned char *input_buffer,
                             std::vector<unsigned> roi_width, std::vector<unsigned> roi_height, unsigned int max_width, unsigned int max_height,
-                            FileMode mode, RaliTensorFormat layout)
+                            FileMode mode, RaliTensorFormat layout, bool eos)
 {
-    _loader_module->feed_external_input(input_images, labels, input_buffer, roi_width, roi_height, max_width, max_height, mode);
+    _external_source_eos = eos;
+    _loader_module->feed_external_input(input_images, labels, input_buffer, roi_width, roi_height, max_width, max_height, mode, eos);
 }
 
 MasterGraph::Status

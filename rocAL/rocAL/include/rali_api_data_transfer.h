@@ -40,5 +40,5 @@ extern "C"  RaliStatus   RALI_API_CALL raliCopyToOutputTensor(RaliContext rali_c
 
 extern "C"  RaliStatus   RALI_API_CALL raliExternalSourceFeedInput(RaliContext rali_context,std::vector<std::string> input_images, std::vector<std::string> labels,
                                                                     unsigned char *input_buffer, std::vector<unsigned> roi_width, std::vector<unsigned> roi_height,
-                                                                    unsigned int max_width, unsigned int max_height, RaliExtSourceMode mode, RaliTensorLayout layout);
+                                                                    unsigned int max_width, unsigned int max_height, RaliExtSourceMode mode, RaliTensorLayout layout, bool eos);
 #endif //MIVISIONX_RALI_API_DATA_TRANSFER_H

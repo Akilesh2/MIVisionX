@@ -77,7 +77,7 @@ int main(int argc, const char ** argv)
         display = atoi(argv[++argIdx]);
 
 
-    std::cout << ">>> Running on " << (processing_device?"GPU":"CPU") << std::endl;
+    std::cerr << ">>> Running on " << (processing_device?"GPU":"CPU") << std::endl;
     RaliImageColor color_format = RaliImageColor::RALI_COLOR_RGB_PLANAR;
     if (rgb == 0)
       color_format = RaliImageColor::RALI_COLOR_U8;
@@ -90,7 +90,7 @@ int main(int argc, const char ** argv)
 
     if(raliGetStatus(handle) != RALI_OK)
     {
-        std::cout << "Could not create the Rali contex\n";
+        std::cerr << "Could not create the Rali contex\n";
         return -1;
     }
 
@@ -113,12 +113,13 @@ int main(int argc, const char ** argv)
 
     if(raliGetStatus(handle) != RALI_OK)
     {
-        std::cout << "JPEG source could not initialize : "<<raliGetErrorMessage(handle) << std::endl;
+        std::cerr << "JPEG source could not initialize : "<<raliGetErrorMessage(handle) << std::endl;
         return -1;
     }
     // create Cifar10 meta data reader
     //raliCreateTextCifar10LabelReader(handle, folderPath1, "data_batch");
-    std::vector<std::string> file_names = {"000000012698.jpg", "000000053304.jpg", "000000123824.jpg", "000000180366.jpg", "000000198759.jpg", "000000239654.jpg"};
+    std::vector<std::string> file_names = {"000000012698.jpg", "000000053304.jpg", "000000123824.jpg", "000000180366.jpg", "000000198759.jpg", "000000239654.jpg", "000000314019.jpg", "000000327777.jpg", "000000365934.jpg", "000000392153.jpg"};
+    std::vector<std::string> labels = {"0","1","2","3","4","5","0","1","2","3"};
 
 #if 0
     const size_t num_values = 3;
@@ -164,18 +165,18 @@ int main(int argc, const char ** argv)
 
     if(raliGetStatus(handle) != RALI_OK)
     {
-        std::cout << "Error while adding the augmentation nodes " << std::endl;
+        std::cerr << "Error while adding the augmentation nodes " << std::endl;
         auto err_msg = raliGetErrorMessage(handle);
-        std::cout << err_msg << std::endl;
+        std::cerr << err_msg << std::endl;
     }
     // Calling the API to verify and build the augmentation graph
     if(raliVerify(handle) != RALI_OK)
     {
-        std::cout << "Could not verify the augmentation graph" << std::endl;
+        std::cerr << "Could not verify the augmentation graph" << std::endl;
         return -1;
     }
 
-    std::cout << "<Remaining_images, augmentation_count> " << raliGetRemainingImages(handle) << " " << raliGetAugmentationBranchCount(handle) << std::endl;
+    std::cerr << "<Remaining_images, augmentation_count> " << raliGetRemainingImages(handle) << " " << raliGetAugmentationBranchCount(handle) << std::endl;
     // prefetch and feed data for the input pipeline
     for (int i=0; i< prefetch_queue_depth; i++) {
 
@@ -188,7 +189,7 @@ int main(int argc, const char ** argv)
     int w = raliGetOutputWidth(handle);
     int p = (((color_format ==  RaliImageColor::RALI_COLOR_RGB24 ) ||
               (color_format ==  RaliImageColor::RALI_COLOR_RGB_PLANAR )) ? 3 : 1);
-    std::cout << "output width "<< w << " output height "<< h << " color planes "<< p << std::endl;
+    std::cerr << "output width "<< w << " output height "<< h << " color planes "<< p << std::endl;
     const unsigned number_of_cols = 1;    // no augmented case
     float out_tensor[h*w*p*inputBatchSize];
     auto cv_color_format = ((p==3) ? CV_8UC3 : CV_8UC1);
@@ -209,16 +210,31 @@ int main(int argc, const char ** argv)
     float  pmul = 2.0f/255;
     float  padd = -1.0f;
     int index = 0;
+    bool eos = false;
+    int total_images = file_names.size();
     while (!raliIsEmpty(handle) && (iter_cnt < 100))
     {
+        index++;
         std::vector<std::string> input_images;
         for(int i = 0; i < inputBatchSize; i++)
         {
-            input_images.push_back(std::string(folderPath1) + file_names.at(0));
+            input_images.push_back(std::string(folderPath1) + file_names.back());
             file_names.pop_back();
             std::cerr<<"\n Input images :: "<<input_images[i];
         }
-        raliExternalSourceFeedInput(handle, input_images, input_images, NULL, {}, {}, 1, 1, RaliExtSourceMode (0), RaliTensorLayout (0));
+        if((file_names.size()) == 0)
+        {
+           eos = true;
+        }
+        if(index <= (total_images / inputBatchSize))
+        {
+            std::cerr<<"\n************************** Gonna process Batch *************************"<<index;
+            // for(int i = 0; i < input_images.size(); i++)
+            // {
+                // std::cerr<<"\n Input images :: "<<input_images[i];
+            // }
+            raliExternalSourceFeedInput(handle, input_images, input_images, NULL, {}, {}, 1, 1, RaliExtSourceMode (0), RaliTensorLayout (0), eos);
+        }
         if(raliRun(handle) != 0)
             break;
 
@@ -227,20 +243,21 @@ int main(int argc, const char ** argv)
         // else
         //     raliCopyToOutputTensor32(handle, out_tensor, RaliTensorLayout::RALI_NCHW, pmul, pmul, pmul, padd, padd, padd, 0);
         counter += inputBatchSize;
-        raliGetImageLabels(handle, labels.data());
-        unsigned imagename_size = raliGetImageNameLen(handle,ImageNameLen);
-        char imageNames[imagename_size];
-        raliGetImageName(handle,imageNames);
-        std::string imageNamesStr(imageNames);
+        std::cerr<<"\n &&&&&&&&&&&&&&& counter &&&&&&&&&&&&&&&&"<<counter;
+        // raliGetImageLabels(handle, labels.data());
+        // unsigned imagename_size = raliGetImageNameLen(handle,ImageNameLen); // Have to call this after adding image name to meta data - shobi
+        // char imageNames[imagename_size];
+        // raliGetImageName(handle,imageNames);
+        // std::string imageNamesStr(imageNames);
 
-        int pos = 0;
-        for(int i = 0; i < inputBatchSize; i++)
-        {
-            names[i] = imageNamesStr.substr(pos, ImageNameLen[i]);
-            pos += ImageNameLen[i];
-            std::cout << "name "<< names[i] << " label "<< labels[i] << " - ";
-        }
-        std::cout << std::endl;
+        // int pos = 0;
+        // for(int i = 0; i < inputBatchSize; i++)
+        // {
+        //     names[i] = imageNamesStr.substr(pos, ImageNameLen[i]);
+        //     pos += ImageNameLen[i];
+        //     std::cerr << "name "<< names[i] << " label "<< labels[i] << " - ";
+        // }
+        std::cerr << std::endl;
         iter_cnt ++;
 
         if(!display)
@@ -285,19 +302,19 @@ int main(int argc, const char ** argv)
         }
         cv::waitKey(1);
         col_counter = (col_counter+1)%number_of_cols;
-        index++;
     }
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     auto dur = duration_cast<microseconds>( t2 - t1 ).count();
     auto rali_timing = raliGetTimingInfo(handle);
-    std::cout << "Load     time "<< rali_timing.load_time << std::endl;
-    std::cout << "Decode   time "<< rali_timing.decode_time << std::endl;
-    std::cout << "Process  time "<< rali_timing.process_time << std::endl;
-    std::cout << "Transfer time "<< rali_timing.transfer_time << std::endl;
-    std::cout << ">>>>> "<< counter << " images/frames Processed. Total Elapsed Time " << dur/1000000 << " sec " << dur%1000000 << " us " << std::endl;
-    raliRelease(handle);
-    mat_input.release();
-    mat_output.release();
+    std::cerr << "Load     time "<< rali_timing.load_time << std::endl;
+    std::cerr << "Decode   time "<< rali_timing.decode_time << std::endl;
+    std::cerr << "Process  time "<< rali_timing.process_time << std::endl;
+    std::cerr << "Transfer time "<< rali_timing.transfer_time << std::endl;
+    std::cerr << ">>>>> "<< counter << " images/frames Processed. Total Elapsed Time " << dur/1000000 << " sec " << dur%1000000 << " us " << std::endl;
+    // exit(0);
+    // raliRelease(handle);
+    // mat_input.release();
+    // mat_output.release();
     return 0;
 }

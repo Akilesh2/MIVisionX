@@ -61,14 +61,18 @@ void ImageLoader::set_prefetch_queue_depth(size_t prefetch_queue_depth)
     _prefetch_queue_depth = prefetch_queue_depth;
 }
 
-void ImageLoader::feed_external_input(std::vector<std::string> input_images, std::vector<std::string> labels, unsigned char *input_buffer, std::vector<unsigned> roi_width, std::vector<unsigned> roi_height, unsigned int max_width, unsigned int max_height, FileMode mode)
+void ImageLoader::feed_external_input(std::vector<std::string> input_images, std::vector<std::string> labels, unsigned char *input_buffer, std::vector<unsigned> roi_width, std::vector<unsigned> roi_height, unsigned int max_width, unsigned int max_height, FileMode mode, bool eos)
 {
-    _image_loader->feed_external_input(input_images, labels, input_buffer, roi_width, roi_height, max_width, max_height, mode);
+    _external_source_reader = true;
+    _external_input_eos = eos;
+    _image_loader->feed_external_input(input_images, labels, input_buffer, roi_width, roi_height, max_width, max_height, mode, eos);
 }
 
 size_t
 ImageLoader::remaining_count()
 {
+    if(!_external_input_eos)
+        return _batch_size;
     return _remaining_image_count;
 }
 
@@ -191,8 +195,8 @@ ImageLoader::load_routine()
 
         auto load_status = LoaderModuleStatus::NO_MORE_DATA_TO_READ;
         {
-            _decoded_img_info._image_names.reserve(_batch_size*2);
-            std::cerr<<"\n Setting Image size vector to 2";
+            _decoded_img_info._image_names.reserve(_batch_size*2); // This has to be changed - shobi
+            // std::cerr<<"\n Setting Image size vector to 2";
             load_status = _image_loader->load(data,
                                               _decoded_img_info._image_names,
                                               _output_image->info().width(),
@@ -203,8 +207,8 @@ ImageLoader::load_routine()
                                               _decoded_img_info._original_height,
                                               _output_image->info().color_format(), _decoder_keep_original);
 
-_decoded_img_info._image_names[0]="murugan";
-_decoded_img_info._image_names[1]="thunai";
+// _decoded_img_info._image_names[0]="murugan";
+// _decoded_img_info._image_names[1]="thunai";
             if (load_status == LoaderModuleStatus::OK)
             {
                 if (_randombboxcrop_meta_data_reader)

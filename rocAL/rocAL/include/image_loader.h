@@ -54,7 +54,7 @@ public:
     decoded_image_info get_decode_image_info() override;
     crop_image_info get_crop_image_info() override;
     void set_prefetch_queue_depth(size_t prefetch_queue_depth)  override;
-    void feed_external_input(std::vector<std::string> input_images, std::vector<std::string> labels, unsigned char *input_buffer, std::vector<unsigned> roi_width, std::vector<unsigned> roi_height, unsigned int max_width, unsigned int max_height, FileMode mode) override;
+    void feed_external_input(std::vector<std::string> input_images, std::vector<std::string> labels, unsigned char *input_buffer, std::vector<unsigned> roi_width, std::vector<unsigned> roi_height, unsigned int max_width, unsigned int max_height, FileMode mode, bool eos) override;
     void shut_down() override;
 private:
     bool is_out_of_data();
@@ -84,7 +84,9 @@ private:
     size_t _prefetch_queue_depth; // Used for circular buffer's internal buffer
     size_t _image_counter = 0;//!< How many images have been loaded already
     size_t _remaining_image_count;//!< How many images are there yet to be loaded
+    bool _external_source_reader = false; // Set to true if external source reader
     bool _decoder_keep_original = false;
     std::shared_ptr<RandomBBoxCrop_MetaDataReader> _randombboxcrop_meta_data_reader = nullptr;
+    bool _external_input_eos = false;
 };
 

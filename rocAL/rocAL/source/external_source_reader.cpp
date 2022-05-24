@@ -74,8 +74,8 @@ void ExternalSourceReader::incremenet_read_ptr()
 
 size_t ExternalSourceReader::open()
 {
-    // std::cerr<<"\n Calls the ExternalSourceReader::open()";
     if (_mode == FileMode::FILENAME) {
+    // std::cerr<<"\n Calls the ExternalSourceReader::open()";
         std::string next_file_name;
         bool ret = pop_file_name(next_file_name);   // Get next file name: blocking call, will wait till next file is received from external source
         if (_end_of_sequence || !ret)
@@ -86,7 +86,7 @@ size_t ExternalSourceReader::open()
         //   next_file_name = _folder_path + "/" + next_file_name; // check added by Rajy shobi
             next_file_name = next_file_name;
         _last_id= next_file_name;
-        std::cerr<<"\n Gonna read the file :: "<<next_file_name;
+        // std::cerr<<"\n Gonna read the file :: "<<next_file_name;
         filesys::path pathObj(next_file_name);
         if(filesys::exists(pathObj) && filesys::is_regular_file(pathObj))
         {
@@ -110,8 +110,8 @@ size_t ExternalSourceReader::open()
 // std::cerr<<"\n **********7****************";
           fseek(_current_fPtr, 0 , SEEK_SET);// Take the file pointer back to the start
 // std::cerr<<"\n **********8****************";
-            std::cerr<<"\nnext_file_name.data() "<<next_file_name.data();
-            std::cerr<<"\n _current_file_size"<<_current_file_size;
+            // std::cerr<<"\nnext_file_name.data() "<<next_file_name.data();
+            // std::cerr<<"\n _current_file_size"<<_current_file_size;
           _file_data[_curr_file_idx] = std::make_tuple(next_file_name.data(), (size_t)_current_file_size, 0, 0, 0);
 // std::cerr<<"\n **********9****************";
         }
@@ -137,7 +137,7 @@ size_t ExternalSourceReader::read_data(unsigned char* buf, size_t read_size)
         read_size = (read_size > _current_file_size) ? _current_file_size : read_size;
 
         size_t actual_read_size = fread(buf, sizeof(unsigned char), read_size, _current_fPtr);
-        std::cerr<<"\n ExternalSourceReader::read_data - FileMode::FILENAME";
+        // std::cerr<<"\n ExternalSourceReader::read_data - FileMode::FILENAME";
         return actual_read_size;
     } else {
         char *file_data_ptr = std::get<0>(_file_data[_curr_file_idx]);
@@ -247,7 +247,7 @@ void ExternalSourceReader::feed_file_names(const std::vector<std::string>& file_
 {
     for (unsigned n=0; n < num_images; n++) {
       push_file_name(file_names[n]);
-      std::cerr<<"\n ExternalSourceReader::feed_file_names ::"<<file_names[n];
+    //   std::cerr<<"\n ExternalSourceReader::feed_file_names ::"<<file_names[n];
     }
     _end_of_sequence = eos;
 }
