@@ -123,7 +123,7 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
     RocalMetaData meta_data = rocalCreateLabelReader(handle, path);
 
     RocalTensor input1;
-    RocalTensorLayout tensorLayout = RocalTensorLayout::ROCAL_NCHW;
+    RocalTensorLayout tensorLayout = RocalTensorLayout::ROCAL_NHWC;
     RocalTensorOutputType tensorOutputType = RocalTensorOutputType::ROCAL_UINT8;
 
     // The jpeg file loader can automatically select the best size to decode all images to that size
@@ -150,8 +150,8 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         return -1;
     }
 
-    int resize_w = 300;
-    int resize_h = 300;
+    int resize_w = 200;
+    int resize_h = 500;
     RocalTensor image1, image2;
 
     switch (test_case)
@@ -209,7 +209,7 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
     {
         std::cout << ">>>>>>> Running "
                   << "rocalResize" << std::endl;
-        image1 = rocalResizeTensor(handle, input1, tensorLayout, tensorOutputType, 3, 100, 100, 0,true);
+        image1 = rocalResizeTensor(handle, input1, tensorLayout, tensorOutputType, 3,resize_w , resize_h, 0,true);
     break;
     }
     default:

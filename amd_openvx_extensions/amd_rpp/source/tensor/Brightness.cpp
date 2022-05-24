@@ -166,7 +166,7 @@ static vx_status VX_CALLBACK processBrightness(vx_node node, const vx_reference 
         }
         // std::cerr<
         float *temp = ((float*)calloc( 100,sizeof(float) ));
-std::cerr<<"printing pSrc\n";
+        std::cerr<<"printing pSrc\n";
         for (int i=0;i< 100;i++)
                 {
                     temp[i]=(float)*((unsigned char*)(data->pSrc) + i);

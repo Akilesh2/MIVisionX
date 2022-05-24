@@ -73,10 +73,11 @@ void CropTensorNode::update_node()
     
 }
 
-void CropTensorNode::init(int crop_h, int crop_w, float start_x, float start_y)
+void CropTensorNode::init(int crop_h, int crop_w, float start_x, float start_y,int layout)
 {
     _crop_param->crop_h = crop_h;
     _crop_param->crop_w = crop_w;
+    _layout=layout;
 
 }
 

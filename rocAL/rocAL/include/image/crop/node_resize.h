@@ -10,7 +10,7 @@ class ResizeTensorNode : public TensorNode
 public:
     ResizeTensorNode(const std::vector<rocALTensor *> &inputs, const std::vector<rocALTensor *> &outputs);
     ResizeTensorNode() = delete;
-    void init(int interpolation_type);
+    void init(int interpolation_type, int layout);
 
     unsigned int get_dst_width() { return 100; }
     unsigned int get_dst_height() { return 100; }
@@ -24,31 +24,6 @@ private:
     unsigned _layout, _roi_type;
 
     int _interpolation_type;
+    RocalTensorLayout _rocal_tensor_layout;
 
 };
-
-
-
-
-
-
-
-// class ResizeTensorNode : public TensorNode
-// {
-// public:
-//     ResizeTensorNode(const std::vector<rocALTensor *> &inputs, const std::vector<rocALTensor *> &outputs);
-//     ResizeTensorNode() = delete;
-//     void init(int crop_h, int crop_w, int interpolation_type);
-//     std::shared_ptr<RocalCropParam> return_crop_param() { return _crop_param; }
-//     vx_array get_src_width() { return _src_roi_width; }
-//     vx_array get_src_height() { return _src_roi_height; }
-// protected:
-//     void create_node() override ;
-//     void update_node() override;
-// private:
-//     std::shared_ptr<RocalCropParam> _crop_param;
-//     vx_array _src_roi_width,_src_roi_height;
-//     int _interpolation_type;
-//     unsigned _layout, _roi_type;
-// };
-

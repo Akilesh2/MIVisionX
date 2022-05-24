@@ -363,13 +363,19 @@ ROCAL_API_CALL rocalCropMirrorNormalizeTensor(RocalContext p_context,
     {
         if(!input || !context || crop_width == 0 || crop_height == 0)
             THROW("Null values passed as input")
+        int layout=0;
         switch(rocal_tensor_layout)
         {
             case 0:
                 op_tensorFormat = RocalTensorlayout::NHWC;
+                layout=0;
+                std::cerr<<"RocalTensorlayout::NHWC";
                 break;
             case 1:
                 op_tensorFormat = RocalTensorlayout::NCHW;
+                layout=1;
+                std::cerr<<"RocalTensorlayout::NCHW";
+               
                 break;
             default:
                 THROW("Unsupported Tensor layout" + TOSTR(rocal_tensor_layout))
@@ -397,12 +403,12 @@ ROCAL_API_CALL rocalCropMirrorNormalizeTensor(RocalContext p_context,
         // output_info.max_width(crop_width);
         // output_info.max_height(crop_height);
         // output_info.format(op_tensorFormat);
-        // output_info.set_data_type(op_tensorDataType);-------
+        output_info.set_data_type(op_tensorDataType);
         output = context->master_graph->create_tensor(output_info, is_output);
         // For the nodes that user provides the output size the dimension of all the images after this node will be fixed and equal to that size
         output->reset_tensor_roi();
         context->master_graph->add_node<CropMirrorNormalizeTensorNode>({input}, {output})->init(crop_height, crop_width, start_x, start_y, mean_acutal,
-                                                                                        std_actual , mirror );
+                                                                                        std_actual , mirror,layout );
     }
     catch(const std::exception& e)
     {
@@ -618,13 +624,16 @@ ROCAL_API_CALL rocalCropTensor(RocalContext p_context,
     {
         if(!input || !context || crop_width == 0 || crop_height == 0)
             THROW("Null values passed as input")
+        int layout=0;
         switch(rocal_tensor_layout)
         {
             case 0:
                 op_tensorFormat = RocalTensorlayout::NHWC;
+                layout=0;
                 break;
             case 1:
                 op_tensorFormat = RocalTensorlayout::NCHW;
+                layout=1;
                 break;
             default:
                 THROW("Unsupported Tensor layout" + TOSTR(rocal_tensor_layout))
@@ -656,7 +665,7 @@ ROCAL_API_CALL rocalCropTensor(RocalContext p_context,
         output = context->master_graph->create_tensor(output_info, is_output);
         // For the nodes that user provides the output size the dimension of all the images after this node will be fixed and equal to that size
         output->reset_tensor_roi();
-        context->master_graph->add_node<CropTensorNode>({input}, {output})->init(crop_height, crop_width, start_x, start_y);
+        context->master_graph->add_node<CropTensorNode>({input}, {output})->init(crop_height, crop_width, start_x, start_y,layout);
     }
     catch(const std::exception& e)
     {
@@ -675,9 +684,9 @@ ROCAL_API_CALL rocalResizeTensor(RocalContext p_context,
                                             RocalTensorLayout rocal_tensor_layout,
 
                                             RocalTensorOutputType rocal_tensor_output_type,
-                                            unsigned crop_depth,
-                                            unsigned crop_height,
-                                            unsigned crop_width,
+                                            unsigned resize_depth,
+                                            unsigned resize_height,
+                                            unsigned resize_width,
                                             int interpolation_type,
                                             bool is_output)
 {
@@ -688,20 +697,22 @@ ROCAL_API_CALL rocalResizeTensor(RocalContext p_context,
     RocalTensorDataType op_tensorDataType;
     try
     {
-        if(!input || !context || crop_width == 0 || crop_height == 0)
+        if(!input || !context || resize_width == 0 || resize_height == 0)
             THROW("Null values passed as input")
+        int layout=0;
         switch(rocal_tensor_layout)
         {
             case 0:
                 op_tensorFormat = RocalTensorlayout::NHWC;
+                layout=0;
                 break;
             case 1:
                 op_tensorFormat = RocalTensorlayout::NCHW;
+                layout=1;
                 break;
             default:
                 THROW("Unsupported Tensor layout" + TOSTR(rocal_tensor_layout))
         }
-
         switch(rocal_tensor_output_type)
         {
             case ROCAL_FP32:
@@ -721,14 +732,14 @@ ROCAL_API_CALL rocalResizeTensor(RocalContext p_context,
         }
         // For the crop mirror normalize resize node, user can create an image with a different width and height
         rocALTensorInfo output_info = input->info();
-        // output_info.max_width(crop_width);
-        // output_info.max_height(crop_height);
-        // output_info.format(op_tensorFormat);
-        output_info.set_data_type(op_tensorDataType);
+        // Need to just set dims depending on NCHW or NHWC
+        output_info.set_width(resize_width);
+        output_info.set_height(resize_height);
+        // output_info.set_data_type(op_tensorDataType);
         output = context->master_graph->create_tensor(output_info, is_output);
         // For the nodes that user provides the output size the dimension of all the images after this node will be fixed and equal to that size
         output->reset_tensor_roi();
-        context->master_graph->add_node<ResizeTensorNode>({input}, {output})->init( interpolation_type);
+        context->master_graph->add_node<ResizeTensorNode>({input}, {output})->init( interpolation_type, layout);
     }
     catch(const std::exception& e)
     {

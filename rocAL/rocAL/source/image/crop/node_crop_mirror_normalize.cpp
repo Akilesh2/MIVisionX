@@ -94,13 +94,14 @@ void CropMirrorNormalizeTensorNode::update_node()
     
 }
 
-void CropMirrorNormalizeTensorNode::init(int crop_h, int crop_w, float start_x, float start_y, float mean, float std_dev, IntParam *mirror)
+void CropMirrorNormalizeTensorNode::init(int crop_h, int crop_w, float start_x, float start_y, float mean, float std_dev, IntParam *mirror,int layout)
 {
     _crop_param->crop_h = crop_h;
     _crop_param->crop_w = crop_w;
     _mean   = mean;
     _std_dev = std_dev;
     _mirror.set_param(core(mirror));
+    _layout=layout;
 }
 
 

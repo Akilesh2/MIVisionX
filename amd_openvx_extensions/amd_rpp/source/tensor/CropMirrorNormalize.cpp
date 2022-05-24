@@ -328,7 +328,7 @@ ERROR_CHECK(vxQueryNode(node, VX_NODE_ATTRIBUTE_AMD_HIP_STREAM, &data->handle.hi
     data->roi_tensor_Ptr = (RpptROI *) calloc(data->nbatchSize, sizeof(RpptROI));
 
 
-
+std::cerr<<"layoutttt "<<layout;
     if(layout == 0) // NHWC
     {
         // source_description_ptr

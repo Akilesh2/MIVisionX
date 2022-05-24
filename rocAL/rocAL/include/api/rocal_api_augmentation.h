@@ -24,8 +24,10 @@ THE SOFTWARE.
 #define MIVISIONX_ROCAL_API_AUGMENTATION_H
 #include "rocal_api_types.h"
 
-extern "C" RocalTensor ROCAL_API_CALL rocalBrightnessTensor(RocalContext context, RocalTensor input,RocalTensorLayout rocal_tensor_layout,RocalTensorOutputType rocal_tensor_output_type, bool is_output,
-                                                   RocalFloatParam alpha = NULL, RocalFloatParam beta = NULL);
+extern "C" RocalTensor 
+ROCAL_API_CALL rocalBrightnessTensor(RocalContext context, RocalTensor input, 
+                                    RocalTensorLayout rocal_tensor_layout, RocalTensorOutputType rocal_tensor_output_type, 
+                                    bool is_output, RocalFloatParam alpha = NULL, RocalFloatParam beta = NULL);
 
 
 
@@ -90,9 +92,9 @@ extern "C" RocalTensor ROCAL_API_CALL rocalCropTensor(RocalContext context, Roca
 extern "C" RocalTensor ROCAL_API_CALL rocalResizeTensor(RocalContext context, RocalTensor input,
                                                                   RocalTensorLayout rocal_tensor_layout,
                                                                   RocalTensorOutputType rocal_tensor_output_type,
-                                                                  unsigned crop_depth,
-                                                                  unsigned crop_height,
-                                                                  unsigned crop_width,
+                                                                  unsigned resize_depth,
+                                                                  unsigned resize_height,
+                                                                  unsigned resize_width,
                                                                   int interpolation_type,
                                                                   bool is_output);
 
