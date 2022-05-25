@@ -167,11 +167,13 @@ static vx_status VX_CALLBACK processColorCast(vx_node node, const vx_reference *
     {
 #if ENABLE_OPENCL
         refreshColorCast(node, parameters, num, data);
-        rpp_status = rppt_color_twist_gpu((void *)data->cl_pSrc, data->src_desc_ptr, (void *)data->cl_pDst, data->src_desc_ptr,  data->red, data->green, data->blue, data->alpha, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
+        rpp_status = rppt_color_cast_gpu((void *)data->cl_pSrc, data->src_desc_ptr, (void *)data->cl_pDst, data->src_desc_ptr, data->rgbTensor,  data->alphaTensor, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
+        // rpp_status = rppt_color_cast_host(data->pSrc, data->src_desc_ptr, data->pDst, data->src_desc_ptr, data->rgbTensor, data->alphaTensor, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
+
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
 #elif ENABLE_HIP
         refreshColorCast(node, parameters, num, data);
-        rpp_status = rppt_color_twist_gpu((void *)data->hip_pSrc, data->src_desc_ptr, (void *)data->hip_pDst, data->src_desc_ptr,  data->red, data->green, data->blue, data->alpha, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
+        rpp_status = rppt_color_cast_gpu((void *)data->hip_pSrc, data->src_desc_ptr, (void *)data->hip_pDst, data->src_desc_ptr,  data->rgbTensor,  data->alphaTensor, data->roi_tensor_Ptr, data->roiType, data->rppHandle);
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
 #endif
     }
