@@ -165,6 +165,7 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         std::cerr<<"In unit_Test batchsize "<< inputBatchSize<<"\n";
         image1 = rocalCropMirrorNormalizeTensor(handle, input1, tensorLayout, tensorOutputType, 3, resize_w, resize_h, 0, 0, 0, mean, sdev, true);
 
+
     }
     break;
     case 1:
@@ -217,6 +218,13 @@ int test(int test_case, const char *path, const char *outName, int rgb, int gpu,
         std::cout << ">>>>>>> Running "
                   << "rocalColorCast" << std::endl;
         image1 = rocalColorCastTensor(handle, input1, tensorLayout, tensorOutputType, true);
+    break;
+    }
+    case 8: 
+    {
+        std::cout << ">>>>>>> Running "
+                  << "rocalspatter" << std::endl;
+        image1 = rocalSpatterTensor(handle, input1, tensorLayout, tensorOutputType, true);
     break;
     }
     default:

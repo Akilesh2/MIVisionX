@@ -28,6 +28,9 @@ THE SOFTWARE.
 #include "node_crop.h"
 #include "node_resize.h"
 #include "node_color_cast.h"
+#include "node_spatter.h"
+
+
 
 #include "node_crop_mirror_normalize.h"
 #include "node_copy.h"
@@ -777,13 +780,16 @@ ROCAL_API_CALL rocalColorCastTensor(
     RocalTensorDataType op_tensorDataType;
     try
     {
+        int layout=0;
         switch(rocal_tensor_layout)
         {
             case 0:
                 op_tensorFormat = RocalTensorlayout::NHWC;
+                layout=0;
                 break;
             case 1:
                 op_tensorFormat = RocalTensorlayout::NCHW;
+                layout=1;
                 break;
             default:
                 THROW("Unsupported Tensor layout" + TOSTR(rocal_tensor_layout))
@@ -806,7 +812,7 @@ ROCAL_API_CALL rocalColorCastTensor(
         }
         output = context->master_graph->create_tensor(input->info(), is_output);
 
-        context->master_graph->add_node<ColorCastTensorNode>({input}, {output})->init(red, green, blue ,alpha);
+        context->master_graph->add_node<ColorCastTensorNode>({input}, {output})->init(red, green, blue ,alpha,layout);
     }
     catch(const std::exception& e)
     {
@@ -817,3 +823,70 @@ ROCAL_API_CALL rocalColorCastTensor(
 }
 
 
+//spatter
+RocalTensor
+ROCAL_API_CALL rocalSpatterTensor(
+        RocalContext p_context,
+        RocalTensor p_input,
+        RocalTensorLayout rocal_tensor_layout,
+        RocalTensorOutputType rocal_tensor_output_type,
+        bool is_output,
+        int R_value,
+        int G_value,
+        int B_value)
+{
+    if(!p_context || !p_input)
+        THROW("Null values passed as input")
+    rocALTensor* output = nullptr;
+    auto context = static_cast<Context*>(p_context);
+    auto input = static_cast<rocALTensor*>(p_input);
+    // auto red = static_cast<FloatParam*>(R_value);
+    // auto green = static_cast<FloatParam*>(G_value);
+    // auto blue = static_cast<FloatParam*>(B_value);
+    // auto alpha = static_cast<FloatParam*>(alpha_tensor);
+
+    RocalTensorlayout op_tensorFormat;
+    RocalTensorDataType op_tensorDataType;
+    try
+    {
+        int layout=0;
+        switch(rocal_tensor_layout)
+        {
+            case 0:
+                op_tensorFormat = RocalTensorlayout::NHWC;
+                layout=0;
+                break;
+            case 1:
+                op_tensorFormat = RocalTensorlayout::NCHW;
+                layout=1;
+                break;
+            default:
+                THROW("Unsupported Tensor layout" + TOSTR(rocal_tensor_layout))
+        }
+
+        switch(rocal_tensor_output_type)
+        {
+            case ROCAL_FP32:
+                std::cerr<<"\n Setting output type to FP32";
+                op_tensorDataType = RocalTensorDataType::FP32;
+                break;
+            case ROCAL_FP16:
+                op_tensorDataType = RocalTensorDataType::FP16;
+                break;
+            case ROCAL_UINT8:
+                op_tensorDataType = RocalTensorDataType::UINT8;
+                break;
+            default:
+                THROW("Unsupported Tensor output type" + TOSTR(rocal_tensor_output_type))
+        }
+        output = context->master_graph->create_tensor(input->info(), is_output);
+
+        context->master_graph->add_node<SpatterTensorNode>({input}, {output})->init(R_value,G_value,B_value,layout);
+    }
+    catch(const std::exception& e)
+    {
+        context->capture_error(e.what());
+        ERR(e.what())
+    }
+    return output;
+}

@@ -107,6 +107,16 @@ extern "C" RocalTensor ROCAL_API_CALL rocalColorCastTensor( RocalContext p_conte
                                                             RocalFloatParam G_value = NULL,
                                                             RocalFloatParam B_value = NULL,
                                                             RocalFloatParam alpha_tensor = NULL);
+
+
+extern "C" RocalTensor ROCAL_API_CALL rocalSpatterTensor(RocalContext p_context,RocalTensor p_input,
+                                                        RocalTensorLayout rocal_tensor_layout,
+                                                        RocalTensorOutputType rocal_tensor_output_type,
+                                                        bool is_output,
+                                                        int R_value=0,
+                                                        int G_value=0,
+                                                        int B_value=0);
+
                                               
 
 

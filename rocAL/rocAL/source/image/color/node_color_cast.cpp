@@ -37,22 +37,24 @@ void ColorCastTensorNode::create_node()
         THROW("Adding the colorcast_batch (vxExtrppNode_ColotCast) node failed: "+ TOSTR(status))
 }
 
-void ColorCastTensorNode::init( float red, float green, float blue , float alpha)
+void ColorCastTensorNode::init( float red, float green, float blue , float alpha,int layout)
 {
+    _layout=layout;
     _red.set_param(red);
     _green.set_param(green);
     _blue.set_param(blue);
     _alpha.set_param(alpha);
-    _layout = _roi_type = 0;
+    // _layout = _roi_type = 0;
 }
 
-void ColorCastTensorNode::init( FloatParam* red, FloatParam* green, FloatParam* blue, FloatParam* alpha)
+void ColorCastTensorNode::init( FloatParam* red, FloatParam* green, FloatParam* blue, FloatParam* alpha, int layout)
 {
+    _layout=layout;
     _red.set_param(core(red));
     _green.set_param(core(green));
     _blue.set_param(core(blue));
     _alpha.set_param(core(alpha));
-    _layout = _roi_type = 0;
+    // _layout = _roi_type = 0;
 }
 
 

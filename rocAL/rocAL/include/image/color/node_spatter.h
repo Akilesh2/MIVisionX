@@ -26,28 +26,21 @@ THE SOFTWARE.
 #include "parameter_vx.h"
 #include "graph.h"
 
-class ColorCastTensorNode : public TensorNode
+class SpatterTensorNode : public TensorNode
 {
 public:
-    ColorCastTensorNode(const std::vector<rocALTensor *> &inputs, const std::vector<rocALTensor *> &outputs);
-    ColorCastTensorNode() = delete;
+    SpatterTensorNode(const std::vector<rocALTensor *> &inputs, const std::vector<rocALTensor *> &outputs);
+    SpatterTensorNode() = delete;
 
-    void init( float red, float blue,float green , float alpha,int layout);
-    void init( FloatParam* red_param, FloatParam* green_param,  FloatParam* blue_param,  FloatParam* alpha_param, int layout );
+    void init( int red, int blue,int green,int layout );
 
 protected:
     void create_node() override ;
     void update_node() override;
 private:
 
-    ParameterVX<float> _red;
-    ParameterVX<float> _green;
-    ParameterVX<float> _blue;
-    ParameterVX<float> _alpha;
+    int _red,_blue,_green;
 
     unsigned _layout, _roi_type;
-    constexpr static float RED_RANGE [2] = {0, 100};
-    constexpr static float   GREEN_RANGE [2] = {0, 100};
-    constexpr static float BLUE_RANGE [2] = {0, 170};
-    constexpr static float ALPHA_RANGE [2] = {0, 1};
+    
 };
