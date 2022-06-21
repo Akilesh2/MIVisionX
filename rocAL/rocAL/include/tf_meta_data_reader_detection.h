@@ -36,6 +36,7 @@ class TFMetaDataReaderDetection: public MetaDataReader
 public :
     void init(const MetaDataConfig& cfg) override;
     void lookup(const std::vector<std::string>& image_names) override;
+    void add_labels(std::vector<std::string> image_name, std::vector<int> label) override { };
     void read_all(const std::string& path) override;
     void release(std::string image_name);
     void release() override;
@@ -52,8 +53,8 @@ private:
     void add(std::string image_name, BoundingBoxCords bbox, BoundingBoxLabels b_labels, ImgSize image_size);
     bool _last_rec;
     //std::shared_ptr<TF_Read> _TF_read = nullptr;
-    void read_record(std::ifstream &file_contents, uint file_size, std::vector<std::string> &image_name, 
-        std::string user_label_key, std::string user_text_key, 
+    void read_record(std::ifstream &file_contents, uint file_size, std::vector<std::string> &image_name,
+        std::string user_label_key, std::string user_text_key,
         std::string user_xmin_key, std::string user_ymin_key, std::string user_xmax_key, std::string user_ymax_key,
         std::string user_filename_key);    // std::map<std::string, std::shared_ptr<Label>> _map_content;
     // std::map<std::string, std::shared_ptr<Label>>::iterator _itr;

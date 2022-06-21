@@ -40,7 +40,7 @@ class SeededRNG {
   * @param state_size How many seed are used to initialize one RNG. Used to lower probablity of
   * collisions between seeds used to initialize RNGs in different operators.
   */
-public: 
+public:
   SeededRNG (int batch_size = 128) {
       std::random_device source;
       _batch_size = batch_size;

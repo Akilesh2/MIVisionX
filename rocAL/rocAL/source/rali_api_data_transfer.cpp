@@ -95,7 +95,7 @@ RaliStatus RALI_API_CALL
 raliExternalSourceFeedInput(
         RaliContext p_context,
         std::vector<std::string> input_images,
-        std::vector<std::string> labels,
+        std::vector<int> labels,
         unsigned char *input_buffer,
         std::vector<unsigned> roi_width,
         std::vector<unsigned> roi_height,
