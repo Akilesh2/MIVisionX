@@ -52,6 +52,8 @@ using half_float::half;
 #include <rocal_hip_kernels.h>
 #endif
 
+long long unsigned graph_process_time = 0;
+
 static void VX_CALLBACK log_callback(vx_context context, vx_reference ref, vx_status status, const vx_char* string)
 {
     size_t len = strnlen(string, MAX_STRING_LENGTH);
@@ -986,7 +988,12 @@ void MasterGraph::output_routine()
                     else
                         full_batch_meta_data = _augmented_meta_data->clone();
                 }
+                std::chrono::high_resolution_clock::time_point graph_process_start_time = std::chrono::high_resolution_clock::now();
                 _graph->process();
+                std::chrono::high_resolution_clock::time_point graph_process_end_time = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double, std::micro> graph_process_time_elapsed = graph_process_end_time - graph_process_start_time;
+                auto graph_process_time_dur = static_cast<long long unsigned> (std::chrono::duration_cast<std::chrono::microseconds>(graph_process_time_elapsed).count());
+                graph_process_time +=  graph_process_time_dur;
             }
             _bencode_time.start();
             if(_is_box_encoder )
@@ -1006,7 +1013,7 @@ void MasterGraph::output_routine()
             _ring_buffer.push(); // Image data and metadata is now stored in output the ring_buffer, increases it's level by 1
         }
         _process_time.end();
-
+        std::cerr<<"_graph->process() Time: "<<graph_process_time<<std::endl;
     }
     catch (const std::exception &e)
     {

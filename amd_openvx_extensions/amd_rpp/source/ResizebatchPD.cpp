@@ -201,7 +201,6 @@ static vx_status VX_CALLBACK processResizebatchPD(vx_node node, const vx_referen
         }
         return_status = (rpp_status == RPP_SUCCESS) ? VX_SUCCESS : VX_FAILURE;
 #elif ENABLE_HIP
-
         chrono::high_resolution_clock::time_point refresh_start_time = chrono::high_resolution_clock::now();
         refreshResizebatchPD(node, parameters, num, data);
         chrono::high_resolution_clock::time_point refresh_end_time = chrono::high_resolution_clock::now();
@@ -360,7 +359,7 @@ static vx_status VX_CALLBACK initializeResizebatchPD(vx_node node, const vx_refe
 
 static vx_status VX_CALLBACK uninitializeResizebatchPD(vx_node node, const vx_reference *parameters, vx_uint32 num)
 {
-    chrono::high_resolution_clock::time_point init_start_time = chrono::high_resolution_clock::now();
+    chrono::high_resolution_clock::time_point uninit_start_time = chrono::high_resolution_clock::now();
     ResizebatchPDLocalData *data;
     STATUS_ERROR_CHECK(vxQueryNode(node, VX_NODE_LOCAL_DATA_PTR, &data, sizeof(data)));
 #if ENABLE_OPENCL || ENABLE_HIP
@@ -384,11 +383,11 @@ static vx_status VX_CALLBACK uninitializeResizebatchPD(vx_node node, const vx_re
         #endif
     #endif
     delete (data);
-    chrono::high_resolution_clock::time_point init_end_time = chrono::high_resolution_clock::now();
-    chrono::duration<double, std::micro> init_time_elapsed = init_end_time - init_start_time;
-    auto uninit_time_dur = static_cast<long long unsigned> (chrono::duration_cast<chrono::microseconds>(init_time_elapsed).count());
+    chrono::high_resolution_clock::time_point uninit_end_time = chrono::high_resolution_clock::now();
+    chrono::duration<double, std::micro> uninit_time_elapsed = uninit_end_time - uninit_start_time;
+    auto uninit_time_dur = static_cast<long long unsigned> (chrono::duration_cast<chrono::microseconds>(uninit_time_elapsed).count());
     rpp_uninit_time +=  uninit_time_dur;
-    // std::cerr<<"uninit Time: "<<uninit_time_dur<<std::endl;
+    
     std::cerr<<"\n *******************************************************************************************";
     std::cerr<<"\nComplete Analysis of Resize augmentation \n";
     #if TENSOR_RPP

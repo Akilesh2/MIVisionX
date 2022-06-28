@@ -23,6 +23,11 @@ THE SOFTWARE.
 #include <device_manager.h>
 #include "ring_buffer.h"
 
+#include <chrono>
+#include <utility>
+
+long long unsigned block_if_empty_time = 0;
+
 RingBuffer::RingBuffer(unsigned buffer_depth):
         BUFF_DEPTH(buffer_depth),
         _dev_sub_buffer(buffer_depth),
@@ -56,7 +61,14 @@ void RingBuffer:: block_if_full()
 }
 std::vector<void*> RingBuffer::get_read_buffers()
 {
+    std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
     block_if_empty();
+
+    std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::micro> time_elapsed = end_time - start_time;
+    auto time_dur = static_cast<long long unsigned> (std::chrono::duration_cast<std::chrono::microseconds>(time_elapsed).count());
+    block_if_empty_time +=  time_dur;
+
     if((_mem_type == RocalMemType::OCL) || (_mem_type == RocalMemType::HIP))
         return _dev_sub_buffer[_read_ptr];
     return _host_sub_buffers[_read_ptr];
@@ -344,6 +356,7 @@ RingBuffer::~RingBuffer()
         _host_master_buffers.clear();
         _host_sub_buffers.clear();
     }
+    std::cerr<<"blockifempty() Time: "<<block_if_empty_time<<std::endl;
 }
 
 bool RingBuffer::empty()
