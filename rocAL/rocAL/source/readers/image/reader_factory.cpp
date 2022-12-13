@@ -36,7 +36,7 @@ std::shared_ptr<Reader> create_reader(ReaderConfig config) {
     switch(config.type()) {
         case StorageType ::FILE_SYSTEM:
         {
-            std::cerr<<"\n CASE FILE SYS";
+            // std::cerr<<"\n CASE FILE SYS";
             auto ret = std::make_shared<FileSourceReader>();
             if(ret->initialize(config) != Reader::Status::OK)
                 throw std::runtime_error("File reader cannot access the storage");

@@ -54,11 +54,11 @@ unsigned FileSourceReader::count_items()
 
 Reader::Status FileSourceReader::initialize(ReaderConfig desc)
 {
-    std::cerr << "FileSourceReader::initialize(ReaderConfig desc)";
+    // std::cerr << "FileSourceReader::initialize(ReaderConfig desc)";
     auto ret = Reader::Status::OK;
     _file_id = 0;
     _folder_path = desc.path();
-    std::cerr << "\n _folder_path :: "<< _folder_path;
+    // std::cerr << "\n _folder_path :: "<< _folder_path;
     _shard_id = desc.get_shard_id();
     _shard_count = desc.get_shard_count();
     _batch_count = desc.get_batch_size();
@@ -156,7 +156,7 @@ FileSourceReader::release()
 
 void FileSourceReader::reset()
 {
-    std::cerr<<"\n Here in reset";
+    // std::cerr<<"\n Here in reset";
     _shuffle_time.start();
     if (_shuffle) std::random_shuffle(_file_names.begin(), _file_names.end());
     _shuffle_time.end();

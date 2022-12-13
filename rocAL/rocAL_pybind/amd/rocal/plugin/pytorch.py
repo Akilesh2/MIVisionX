@@ -54,21 +54,18 @@ class RALIGenericIterator(object):
     def __init__(self, pipeline, tensor_layout = types.NCHW, reverse_channels = False, multiplier = [1.0,1.0,1.0], offset = [0.0, 0.0, 0.0], tensor_dtype=types.FLOAT):
         self.loader = pipeline
         self.tensor_format =tensor_layout
-        print("HERE 1")
         self.multiplier = multiplier
         self.offset = offset
         self.reverse_channels = reverse_channels
-        print("HERE 2")
         self.tensor_dtype = tensor_dtype
         self.len = b.getRemainingImages(self.loader._handle)
-        print("HERE 3")
 
 
     def next(self):
         return self.__next__()
 
     def __next__(self):
-        print("Comes to next")
+        # print("Comes to next")
         if(b.isEmpty(self.loader._handle)):
             raise StopIteration
 
@@ -80,9 +77,9 @@ class RALIGenericIterator(object):
 
         #From init
 
-        print(self.output_tensor_list)
+        # print(self.output_tensor_list)
         self.num_of_dims = self.output_tensor_list[0].num_of_dims()
-        print("Number of dims", self.num_of_dims)
+        # print("Number of dims", self.num_of_dims)
         if self.num_of_dims == 4: # In the case of the Image data
             self.augmentation_count = len(self.output_tensor_list)
             self.w = self.output_tensor_list[0].batch_width()
@@ -108,15 +105,15 @@ class RALIGenericIterator(object):
             elif self.tensor_dtype == types.FLOAT16:
                 return (self.out.astype(np.float16)), self.labels_tensor
         elif self.num_of_dims == 3: #In case of an audio data
-            print("AUDIO DATA !!!!")
+            # print("AUDIO DATA !!!!")
             self.augmentation_count = len(self.output_tensor_list)
             self.batch_size = self.output_tensor_list[0].batch_size()
             self.channels = self.output_tensor_list[0].batch_width() #Max Channels
             self.samples = self.output_tensor_list[0].batch_height() #Max Samples
             self.audio_length = self.channels * self.samples
-            print("\n Batch Size",self.batch_size)
-            print("\n Channels",self.channels)
-            print("\n Samples",self.samples)
+            # print("\n Batch Size",self.batch_size)
+            # print("\n Channels",self.channels)
+            # print("\n Samples",self.samples)
             self.audio_length_roi = []
             # print("\n The ROI Shapes",torch.tensor(self.output_tensor_list[0].get_roi_at(0)))
             for i in range(self.batch_size):
