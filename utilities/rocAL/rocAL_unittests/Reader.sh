@@ -22,7 +22,7 @@ path=($ROCAL_DATA_PATH/coco/coco_10_img/train_10images_2017/
 #caffe2_classification =  $ROCAL_DATA_PATH/caffe2/classfication/imagenet_val5_encode/  
 # caffe2_detection = $ROCAL_DATA_PATH/caffe2/detection/lmdb_records/
 # coco+reader_keypoints = $ROCAL_DATA_PATH/coco/coco_10_img/train_10images_2017/
-
+ 
 
 echo ${path[0]}
 output_file="sample"
