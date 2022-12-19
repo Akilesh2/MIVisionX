@@ -127,7 +127,7 @@ class RALIGenericIterator(object):
             
 
             # print(self.batch_size * self.channels * self.samples)
-            self.output = torch.empty((self.batch_size, self.channels, self.samples,), dtype=torch.float32)
+            self.output = torch.empty((self.batch_size, self.samples,self.channels,), dtype=torch.float32)
             
             # next
             self.output_tensor_list[0].copy_data(ctypes.c_void_p(self.output.data_ptr()))
