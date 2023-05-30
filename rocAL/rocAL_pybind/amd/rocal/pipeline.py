@@ -319,6 +319,9 @@ class Pipeline(object):
     def rocalGetBoundingBoxLabel(self):
         return b.rocalGetBoundingBoxLabel(self._handle)
 
+    def rocalGetBoundingBoxCords(self):
+        return b.rocalGetBoundingBoxCords(self._handle)
+
     def copy_out_data_ptr(self, data_ptr):
         return b.copy_data_ptr(self._handle, data_ptr)
 
