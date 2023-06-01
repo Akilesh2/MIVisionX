@@ -83,9 +83,9 @@ class ROCALCOCOIterator(object):
         self.output_tensor_list[0].copy_data(ctypes.c_void_p(self.out.data_ptr()))
 
         # 1D labels & bboxes array
-        bbox_cpu = self.loader.rocalGetBoundingBoxLabel()
+        bbox_cpu = self.loader.rocalGetBoundingBoxCords()
         # bbox_arr = torch.as_tensor(bbox_cpu, dtype=torch.float32, device=torch_gpu_device)
-        label_cpu = self.loader.rocalGetImageLabels()
+        label_cpu = self.loader.rocalGetBoundingBoxLabel()
         # label_arr = torch.as_tensor(label_cpu, dtype=torch.int32, device=torch_gpu_device)
         pixelwiselabel_cpu = self.loader.rocalGetPixelwiseLabels()
         # if pixelwiselabels = True
@@ -93,10 +93,21 @@ class ROCALCOCOIterator(object):
             random_mask_pixel_cpu = self.loader.rocalRandomMaskPixel()
         elif self.polygon_mask == True:
             num_objects_per_batch = self.loader.rocalGetBoundingBoxCount()
+            print("num_objects_per_batch(boundingbox count ) ",num_objects_per_batch)
             mask_count_array = np.zeros(num_objects_per_batch, dtype="int32")
+            print("mask_count_array ",mask_count_array)
             total_mask_count_per_batch = self.loader.rocalGetMaskCount(mask_count_array)
+            print("After mask_count_array ",mask_count_array)
+
+            print("total_mask_count_per_batch(mask  count) ",total_mask_count_per_batch)
+
             polygon_size_array = np.zeros(total_mask_count_per_batch, dtype="int32")
+            print("after polygon_size_array ",polygon_size_array)
             mask_coordinates_list = self.loader.rocalGetMaskCoordinates(polygon_size_array, mask_count_array)
+            print("polygon_size_array ",polygon_size_array)
+
+            print("mask_coordinates_list ",len(mask_coordinates_list[0]),"   ",mask_coordinates_list)
+
             self.select_mask_id = [0] #Given by the user
             select_mask_array = self.loader.rocalSelectMask(self.select_mask_id)
 
@@ -110,7 +121,7 @@ class ROCALCOCOIterator(object):
         if self.pixelwise_mask == True:
             return self.out, bbox_cpu, label_cpu, pixelwiselabel_cpu, random_mask_pixel_cpu
         elif self.polygon_mask == True:
-            return self.out, bbox_cpu, label_cpu, pixelwiselabel_cpu, select_mask_array
+            return self.out, bbox_cpu, label_cpu, pixelwiselabel_cpu, select_mask_array,num_objects_per_batch,total_mask_count_per_batch
         else:
             return self.out, bbox_cpu, label_cpu, pixelwiselabel_cpu
 
@@ -204,11 +215,16 @@ def main():
     coco_train_pipeline.build()
     COCOIteratorPipeline = ROCALCOCOIterator(coco_train_pipeline, pixelwise_mask=pixelwise_mask, select_mask_id=[0], polygon_mask=polygon_mask)
     cnt = 0
-    for epoch in range(3):
+    for epoch in range(1):
         print("+++++++++++++++++++++++++++++EPOCH+++++++++++++++++++++++++++++++++++++",epoch)
         for i , it in enumerate(COCOIteratorPipeline):
-            print("************************************** i *************************************",i)
-            print(it)
+            # print("************************************** i *************************************",i)
+            # bbox= it[1][i]
+            # print("bbox shape ", len(bbox))
+            # print("checking  ",it[1])
+            print("bounding box count ", it[5])
+            print("Mask  count ", it[6])
+            print("######################################")
             # for img in it[2]:
             #     print(img.shape)
             #     cnt = cnt + 1

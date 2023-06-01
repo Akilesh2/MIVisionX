@@ -397,8 +397,10 @@ namespace rocal
                 py::tuple bbox_coord;
                 float *bbox_buffer = (float *)(bbox_coords->at(i)->buffer());
                 for(int j = 0, j4 = 0; j < bbox_coords->at(i)->info().dims().at(0); j++, j4 = j * 4)
+                {
                     bbox_coord = py::make_tuple(bbox_buffer[j4], bbox_buffer[j4+1], bbox_buffer[j4+2], bbox_buffer[j4+3]);
-                single_image.append(bbox_coord);
+                    single_image.append(bbox_coord);
+                }
                 list.append(single_image);
             }
             return list;
@@ -474,7 +476,7 @@ namespace rocal
             for(int i = 0; i < bbox_labels->size(); i++) // nbatchSize
             {
                 float *mask_buffer = (float *)(mask_data->at(i)->buffer());
-                std::cout << "\n>>>>>>> MASK COORDS : " << bbox_labels->at(i)->info().dims().at(0) << std::endl;
+                // std::cout << "\n>>>>>>> MASK COORDS : " << bbox_labels->at(i)->info().dims().at(0) << std::endl;
                 py::list single_image;
                 unsigned int mask_idx = 0;
                 for(unsigned j = prev_object_cnt; j < bbox_labels->at(i)->info().dims().at(0) + prev_object_cnt; j++)
@@ -487,16 +489,16 @@ namespace rocal
                         single_mask.append(mask_idx);
                         mask_idx++;
                         py::list mask_buffer_coordinates;
-                        std::cout << "[";
+                        // std::cout << "[";
                         for(int l = 0; l < polygon_size_ptr[poly_cnt]; l++)
                         {
-                            std::cout << mask_buffer[l] << ", ";
+                            // std::cout << mask_buffer[l] << ", ";
                             single_image.append(mask_buffer[l]);
                         }
-                        std::cout << "]";
+                        // std::cout << "]";
                         mask_buffer += polygon_size_ptr[poly_cnt++];
                     }
-                    std::cout << "]\n";
+                    // std::cout << "]\n";
                 }
                 prev_object_cnt += bbox_labels->at(i)->info().dims().at(0);
                 complete_list.append(single_image);
@@ -521,20 +523,20 @@ namespace rocal
             
             py::list per_image_select_mask;
             for (int i = 0; i < bbox_labels->size(); i++) {
-                    std::cout << "\n>>>>>>> Selected polygons and vertices : " << std::endl;
+                    // std::cout << "\n>>>>>>> Selected polygons and vertices : " << std::endl;
                     float* select_mask_polygon_buffer = (float *)(select_mask_polygon->at(i)->buffer());
                     auto sel_vertices_count_per_image = sel_vertices_counts[i];
                     auto sel_mask_ids_per_image = sel_mask_ids[i];
                     int cnt = 0;
                     py::dict mask_select_polygon_dict;
                     for (int j = 0; j < mask_ids.size(); j++) {
-                        std::cout << "Mask id: " << mask_ids[j] << "[";
+                        // std::cout << "Mask id: " << mask_ids[j] << "[";
                         py::list select_mask_polygon_list;
                         for (int k = 0; k < sel_vertices_count_per_image[j]; k++) {
-                            std::cout << select_mask_polygon_buffer[cnt++] << " ,";
+                            // std::cout << select_mask_polygon_buffer[cnt++] << " ,";
                             select_mask_polygon_list.append(select_mask_polygon_buffer[cnt++]);
                         }
-                        std::cout << "]" << std::endl;
+                        // std::cout << "]" << std::endl;
                         std::string key = std::to_string(mask_ids[j]);
                         mask_select_polygon_dict[py::str(key)] = select_mask_polygon_list;
                     }
