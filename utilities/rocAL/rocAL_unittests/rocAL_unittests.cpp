@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include <vector>
 #include <string>
 #include <cstdlib>
-
+#include <fstream>
 
 #include "rocal_api.h"
 
@@ -156,8 +156,9 @@ int main(int argc, const char **argv)
 
 int test(int test_case, int reader_type, const char *path, const char *outName, int rgb, int gpu, int width, int height, int num_of_classes, int display_all, int resize_interpolation_type, int resize_scaling_mode)
 {
+    std::string reader_name;
     size_t num_threads = 1;
-    unsigned int inputBatchSize = 2;
+    unsigned int inputBatchSize = 10;
     int decode_max_width = width;
     int decode_max_height = height;
     int pipeline_type = -1;
@@ -218,6 +219,7 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
         {
             std::cout << ">>>>>>> Running COCO READER" << std::endl;
             pipeline_type = 2;
+            reader_name="coco";
             if (strcmp(rocal_data_path.c_str(), "") == 0)
             {
                 std::cout << "\n ROCAL_DATA_PATH env variable has not been set. ";
@@ -265,6 +267,7 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
         break;
         case 5: //tf detection
         {
+            reader_name="tf";
             std::cout << ">>>>>>> Running TF DETECTION READER" << std::endl;
             pipeline_type = 2;
             char key1[25] = "image/encoded";
@@ -289,6 +292,7 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
         break;
         case 7: //caffe detection
         {
+            reader_name="caffe";
             std::cout << ">>>>>>> Running CAFFE DETECTION READER" << std::endl;
             pipeline_type = 2;
             rocalCreateCaffeLMDBReaderDetection(handle, path);
@@ -305,6 +309,7 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
         break;
         case 9: //caffe2 detection
         {
+            reader_name="caffe2";
             std::cout << ">>>>>>> Running CAFFE2 DETECTION READER" << std::endl;
             pipeline_type = 2;
             rocalCreateCaffe2LMDBReaderDetection(handle, path, true);
@@ -847,8 +852,14 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
                 }
             }
             break;
+            
             case 2: //detection pipeline
             {
+                std::ofstream myfile,myfile_1;
+                std::string output_label_path ="../rocal_outputs/"+reader_name+"_labels.txt";
+                std::string output_bbox_path ="../rocal_outputs/"+reader_name+"_bbox.txt";
+                myfile.open (output_label_path);
+                myfile_1.open (output_bbox_path);
                 int img_size = rocalGetImageNameLen(handle, image_name_length);
                 char img_name[img_size];
                 rocalGetImageName(handle, img_name);
@@ -862,7 +873,7 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
                 std::cerr<<"\n printting bblabels";
                 for(int ii=0;ii<size;ii++)
                 {
-                    std::cerr<<bb_labels[ii]<<"  ";
+                    myfile <<bb_labels[ii]<<"\n";
                 }
                 double bb_coords[size * 4];
                 rocalGetBoundingBoxCords(handle, bb_coords);
@@ -870,7 +881,7 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
 
                 for(int ii=0;ii<(size*4);ii++)
                 {
-                    std::cerr<<bb_coords[ii]<<"  ";
+                    myfile_1 <<bb_coords[ii]<<"\n";
                 }
                 int img_sizes_batch[inputBatchSize * 2];
                 rocalGetImageSizes(handle, img_sizes_batch);
@@ -879,6 +890,7 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
                     std::cout<<"\nwidth:"<<img_sizes_batch[i*2];
                     std::cout<<"\nHeight:"<<img_sizes_batch[(i*2)+1];
                 }
+                myfile.close();
             }
             break;
             case 3: // keypoints pipeline

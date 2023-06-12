@@ -60,6 +60,7 @@ void COCOMetaDataReader::lookup(const std::vector<std::string> &image_names)
             THROW("ERROR: Given name not present in the map" + image_name)
         _output->get_bb_cords_batch()[i] = it->second->get_bb_cords();
         _output->get_bb_labels_batch()[i] = it->second->get_bb_labels();
+        // std::cerr<<"\n \n it->second->get_bb_labels() "<<it->second->get_bb_labels();
         _output->get_img_sizes_batch()[i] = it->second->get_img_size();
         if (_output->metadata_type() == MetaDataType::PolygonMask)
         {
@@ -74,6 +75,7 @@ void COCOMetaDataReader::add(std::string image_name, BoundingBoxCords bb_coords,
 {
     if (exists(image_name))
     {
+        std::cerr<<"bb_labels "<<bb_labels[0]<<" "<<bb_labels.size();
         auto it = _map_content.find(image_name);
         it->second->get_bb_cords().push_back(bb_coords[0]);
         it->second->get_bb_labels().push_back(bb_labels[0]);
@@ -90,6 +92,7 @@ void COCOMetaDataReader::add(std::string image_name, BoundingBoxCords bb_coords,
 {
     if (exists(image_name))
     {
+        std::cerr<<"bb_labels in second "<<bb_labels[0]<<" "<<bb_labels.size();
         auto it = _map_content.find(image_name);
         it->second->get_bb_cords().push_back(bb_coords[0]);
         it->second->get_bb_labels().push_back(bb_labels[0]);
@@ -370,13 +373,13 @@ void COCOMetaDataReader::read_all(const std::string &path)
         for (unsigned int i = 0; i < bb_coords.size(); i++)
         {
             auto _it_label = _label_info.find(bb_labels[i]);
-            int cnt_idx = _it_label->second;
+            int cnt_idx = _it_label->first;
             continuous_label_id.push_back(cnt_idx);
         }
         elem.second->set_bb_labels(continuous_label_id);
     }
     _coco_metadata_read_time.end(); // Debug timing
-    //print_map_contents();
+    // print_map_contents();
     // std::cout << "coco read time in sec: " << _coco_metadata_read_time.get_timing() / 1000 << std::endl;
 }
 
