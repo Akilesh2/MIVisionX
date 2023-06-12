@@ -859,8 +859,19 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
                     std::cerr << "\n Number of box:  " << bb_label_count[i];
                 int bb_labels[size];
                 rocalGetBoundingBoxLabel(handle, bb_labels);
+                std::cerr<<"\n printting bblabels";
+                for(int ii=0;ii<size;ii++)
+                {
+                    std::cerr<<bb_labels[ii]<<"  ";
+                }
                 double bb_coords[size * 4];
                 rocalGetBoundingBoxCords(handle, bb_coords);
+                std::cerr<<"\n printting bbcoords";
+
+                for(int ii=0;ii<(size*4);ii++)
+                {
+                    std::cerr<<bb_coords[ii]<<"  ";
+                }
                 int img_sizes_batch[inputBatchSize * 2];
                 rocalGetImageSizes(handle, img_sizes_batch);
                 for (int i = 0; i < (int)inputBatchSize; i++)

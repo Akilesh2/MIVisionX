@@ -193,9 +193,23 @@ def draw_patches(img, idx, bboxes, device):
         color = (255, 0, 0)
         thickness = 2
         image = cv2.UMat(image).get()
-        image = cv2.rectangle(image, (int(loc_[0]*wtot), int(loc_[1] * htot)), (int(
-            (loc_[2] * wtot)), int((loc_[3] * htot))), color, thickness)
-        cv2.imwrite("OUTPUT_IMAGES_PYTHON/NEW_API/COCO_READER/" + str(idx)+"_"+"train"+".png", image)
+        # print("images in coco file rader ", image)
+        # print("loc_ ",loc_[0], loc_[1],loc_[2],loc_[3])
+        print("loc_  ",loc_)
+        print("wtot ",wtot )
+        print("htot ",htot )
+        print("thickness ",thickness)
+        print("color ", color)
+        
+        # print("wtot ",wtot)
+        # print( "int(loc_[0]*wtot) ",int(loc_[0]*wtot))
+        # print("int(loc_[1] * htot))  ",int(loc_[1] * htot))
+        # print("(int((loc_[2] * wtot)) ",int((loc_[2] * wtot)))
+        # print( "int((loc_[3] * htot))) ",int((loc_[3] * htot)))
+        print( "color ",color )
+        print("thicknes ",thickness)
+        image = cv2.rectangle(image, (int(loc_[0]*wtot), int(loc_[1] * htot)), (int((loc_[2] * wtot)), int((loc_[3] * htot))), color, thickness)
+        # cv2.imwrite("OUTPUT_IMAGES_PYTHON/NEW_API/COCO_READER/" + str(idx)+"_"+"train"+".png", image)
 
 
 def main():
