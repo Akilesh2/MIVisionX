@@ -857,11 +857,16 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
             {
                 std::ofstream myfile,myfile_1;
                 std::string device_type="cpu";
+                std::string rgb_type="rgb";
                 if(gpu ==1 ){
                     device_type="gpu";
                 }
-                std::string output_label_path ="../rocal_outputs/"+reader_name +"_"+ device_type +"_labels.txt";
-                std::string output_bbox_path ="../rocal_outputs/"+reader_name +"_"+ device_type + "_bbox.txt";
+                if(rgb==0) {
+                    rgb_type="gray_scale";
+                }
+
+                std::string output_label_path ="../rocal_outputs/"+reader_name +"_labels_"+ rgb_type + "_" + device_type +".txt";
+                std::string output_bbox_path ="../rocal_outputs/"+reader_name + "_bbox_" +rgb_type + "_" + device_type +".txt";
                 myfile.open (output_label_path);
                 myfile_1.open (output_bbox_path);
                 int img_size = rocalGetImageNameLen(handle, image_name_length);
