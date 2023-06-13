@@ -98,37 +98,4 @@ do
     done
 done
 
-# ./rocAL_unittests 11 "$mxnet_path" "${output_path}CropMirrorNormalize_${rgb_name[$rgb]}_${device_name}_mxnet" $width $height 25 $device $rgb 0 $display
-
-# ./rocAL_unittests 2 /media/trial/MIVisionX-data/rocal_data/coco/coco_10_img/train_10images_2017/ sample 640 480 32 0 1 0 1
-# echo Checking coco  labels
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/labels_golden.txt "$cwd"/rocal_outputs/coco_cpu_labels.txt
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/labels_golden.txt "$cwd"/rocal_outputs/coco_gpu_labels.txt
-
-# echo Checking coco bbox
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/coco_bbox_golden.txt "$cwd"/rocal_outputs/coco_cpu_bbox.txt
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/coco_bbox_golden.txt "$cwd"/rocal_outputs/coco_gpu_bbox.txt
-
-# echo Checking caffe  labels
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/labels_golden.txt "$cwd"/rocal_outputs/caffe_cpu_labels.txt
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/labels_golden.txt "$cwd"/rocal_outputs/caffe_gpu_labels.txt
-
-# echo Checking caffe bbox
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/caffe_bbox_golden.txt "$cwd"/rocal_outputs/caffe_cpu_bbox.txt
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/caffe_bbox_golden.txt "$cwd"/rocal_outputs/caffe_gpu_bbox.txt
-
-# # caffe_bbox_golden
-# # echo Checking caffe2 labels
-# # python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/labels_golden.txt "$cwd"/rocal_outputs/caffe2_labels.txt
-
-# # echo Checking caffe2 bbox
-# # python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/caffe2_bbox_golden.txt "$cwd"/rocal_outputs/caffe2_bbox.txt
-
-# echo Checking tf labels
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/labels_golden.txt "$cwd"/rocal_outputs/tf_cpu_labels.txt
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/labels_golden.txt "$cwd"/rocal_outputs/tf_gpu_labels.txt
-
-# echo Checking caffe bbox
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/tf_bbox_golden.txt "$cwd"/rocal_outputs/tf_cpu_bbox.txt
-# python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/tf_bbox_golden.txt "$cwd"/rocal_outputs/tf_gpu_bbox.txt
 python "$cwd"/compare.py "$cwd"/meta_data_golden_outputs/ "$cwd"/rocal_outputs/
