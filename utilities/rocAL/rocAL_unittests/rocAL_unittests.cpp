@@ -856,8 +856,12 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
             case 2: //detection pipeline
             {
                 std::ofstream myfile,myfile_1;
-                std::string output_label_path ="../rocal_outputs/"+reader_name+"_labels.txt";
-                std::string output_bbox_path ="../rocal_outputs/"+reader_name+"_bbox.txt";
+                std::string device_type="cpu";
+                if(gpu ==1 ){
+                    device_type="gpu";
+                }
+                std::string output_label_path ="../rocal_outputs/"+reader_name +"_"+ device_type +"_labels.txt";
+                std::string output_bbox_path ="../rocal_outputs/"+reader_name +"_"+ device_type + "_bbox.txt";
                 myfile.open (output_label_path);
                 myfile_1.open (output_bbox_path);
                 int img_size = rocalGetImageNameLen(handle, image_name_length);
@@ -888,8 +892,10 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
                     std::cout<<"\nHeight:"<<img_sizes_batch[(i*2)+1];
                 }
                 myfile.close();
+                myfile_1.close();
             }
             break;
+            
             case 3: // keypoints pipeline
             {
                 int size = inputBatchSize;
