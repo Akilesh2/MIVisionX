@@ -870,15 +870,12 @@ int test(int test_case, int reader_type, const char *path, const char *outName, 
                     std::cerr << "\n Number of box:  " << bb_label_count[i];
                 int bb_labels[size];
                 rocalGetBoundingBoxLabel(handle, bb_labels);
-                std::cerr<<"\n printting bblabels";
                 for(int ii=0;ii<size;ii++)
                 {
                     myfile <<bb_labels[ii]<<"\n";
                 }
                 double bb_coords[size * 4];
                 rocalGetBoundingBoxCords(handle, bb_coords);
-                std::cerr<<"\n printting bbcoords";
-
                 for(int ii=0;ii<(size*4);ii++)
                 {
                     myfile_1 <<bb_coords[ii]<<"\n";
